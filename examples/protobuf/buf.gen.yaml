@@ -1,0 +1,6 @@
+version: v1
+plugins:
+  - name: openapi
+    out: gen/openapi
+    opt:
+      - settings=protoc-gen-mikros-extensions.toml

@@ -1,0 +1,242 @@
+syntax = "proto3";
+
+package services.user_bff;
+
+option go_package = "examples/gen/go/services/user_bff;user_bff";
+
+import "google/api/annotations.proto";
+import "openapi/openapi.proto";
+import "services/user/user.proto";
+import "services/common/common.proto";
+import "services/misc/misc.proto";
+
+option (openapi.metadata) = {
+  info: {
+    title: "user-bff"
+    version: "v0.1.0"
+    description: "Just an API example"
+  }
+  server: {
+    url: "http://dev.api.example.com"
+    description: "The development version of the API"
+  }
+  server: {
+    url: "https://prod.api.example.com"
+    description: "The production version of the API"
+  }
+};
+
+service UserBffService {
+  option (openapi.security) = {
+    type: OPENAPI_SECURITY_TYPE_HTTP
+    name: "bearer-auth"
+    scheme: OPENAPI_SECURITY_SCHEME_BEARER
+    bearer_format: "jwt"
+  };
+
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {
+    option (google.api.http) = {
+      post: "/user-bff/v1/users"
+      body: "*"
+    };
+
+    option (openapi.operation) = {
+      summary: "Create a new user"
+      description: "Create a new user according request options."
+      tags: "user-bff"
+      response: {
+        code: RESPONSE_CODE_CREATED
+        description: "Successfully created a new user"
+      }
+
+      response: {
+        code: RESPONSE_CODE_UNAUTHORIZED
+        description: "Unauthorized access"
+      }
+
+      response: {
+        code: RESPONSE_CODE_BAD_REQUEST
+        description: "Invalid request arguments"
+      }
+    };
+  }
+
+  rpc GetUser(GetUserRequest) returns (GetUserResponse) {
+    option (google.api.http) = {
+      get: "/user-bff/v1/users/{id}"
+    };
+
+    option (openapi.operation) = {
+      summary: "Get information from a user"
+      description: "Gets information from a user."
+      tags: "user-bff"
+      response: {
+        code: RESPONSE_CODE_OK
+        description: "Successfully retrieved the user"
+      }
+
+      response: {
+        code: RESPONSE_CODE_UNAUTHORIZED
+        description: "Unauthorized access"
+      }
+
+      response: {
+        code: RESPONSE_CODE_BAD_REQUEST
+        description: "Invalid request arguments"
+      }
+
+      response: {
+        code: RESPONSE_CODE_NOT_FOUND
+        description: "User not found"
+      }
+    };
+  }
+
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse) {
+    option (google.api.http) = {
+      put: "/user-bff/v1/users/{id}"
+      body: "*"
+    };
+
+    option (openapi.operation) = {
+      summary: "Update a user"
+      description: "Update user information."
+      tags: "user-bff"
+      response: {
+        code: RESPONSE_CODE_OK
+        description: "Successfully updated the user"
+      }
+
+      response: {
+        code: RESPONSE_CODE_UNAUTHORIZED
+        description: "Unauthorized access"
+      }
+
+      response: {
+        code: RESPONSE_CODE_BAD_REQUEST
+        description: "Invalid request arguments"
+      }
+
+      response: {
+        code: RESPONSE_CODE_NOT_FOUND
+        description: "User not found"
+      }
+    };
+  }
+
+  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse) {
+    option (google.api.http) = {
+      delete: "/user-bff/v1/users/{id}"
+    };
+
+    option (openapi.operation) = {
+      summary: "Delete a user"
+      description: "Delete a user from the platform."
+      tags: "user-bff"
+      response: {
+        code: RESPONSE_CODE_OK
+        description: "Successfully deleted the user"
+      }
+
+      response: {
+        code: RESPONSE_CODE_UNAUTHORIZED
+        description: "Unauthorized access"
+      }
+
+      response: {
+        code: RESPONSE_CODE_BAD_REQUEST
+        description: "Invalid request arguments"
+      }
+
+      response: {
+        code: RESPONSE_CODE_NOT_FOUND
+        description: "User not found"
+      }
+    };
+  }
+}
+
+message CreateUserRequest {
+  option (openapi.message) = {
+    operation: {
+      request_body: {
+        description: "The information to create a new user."
+      }
+    }
+  };
+
+  string name = 1 [(openapi.property) = {
+    required: true
+    description: "The user name."
+  }];
+
+  string email = 2;
+  int32 age = 3;
+  bool debug = 4;
+  common.Status status = 5;
+  LocalStatus local_status = 6;
+  repeated string teste1 = 7;
+  repeated LocalStatus teste2 = 8;
+}
+
+enum LocalStatus {
+  LOCAL_STATUS_UNSPECIFIED = 0;
+  LOCAL_STATUS_OK = 1;
+  LOCAL_STATUS_ERROR = 2;
+  LOCAL_STATUS_RETRY = 3;
+}
+message CreateUserResponse {
+  user.UserWire user = 1;
+}
+
+message GetUserRequest {
+  string id = 1 [(openapi.property) = {
+    description: "The user ID."
+    example: "usr_njkandjsandslkadnslakdnsald"
+  }];
+}
+
+message GetUserResponse {
+  user.UserWire user = 1;
+}
+
+message UpdateUserRequest {
+  option (openapi.message) = {
+    operation: {
+      request_body: {
+        description: "Available user options to be updated."
+      }
+    }
+  };
+
+  string id = 1;
+  string name = 2;
+  string email = 3;
+  int32 age = 4;
+  UpdateUserAdditionalInfoRequest additional_info = 5;
+}
+
+message UpdateUserAdditionalInfoRequest {
+  string address = 1;
+  string city = 2;
+  UpdateUserExtraDataRequest extra_data = 3;
+}
+
+message UpdateUserExtraDataRequest {
+  string document = 1;
+  string company_name = 2;
+}
+
+message UpdateUserResponse {
+  user.UserWire user = 1;
+}
+
+message DeleteUserRequest {
+  string id = 1;
+}
+
+message DeleteUserResponse {
+  user.UserWire user = 1;
+  misc.MiscCompletedWire completed = 2;
+  misc.MiscMapWire maps = 3;
+}

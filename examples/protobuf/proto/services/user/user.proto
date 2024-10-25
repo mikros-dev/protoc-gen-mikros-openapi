@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package services.user;
+
+option go_package = "examples/gen/go/services/user;user";
+
+import "services/common/common.proto";
+
+message UserWire {
+  string id = 1;
+  string name = 2;
+  common.Status status = 3;
+  string email = 4;
+  int32 age = 5;
+  UserAdditionalInfoWire additional_info = 6;
+}
+
+message UserAdditionalInfoWire {
+  string address = 1;
+  string city = 2;
+  UserExtraDataWire extra_data = 3;
+}
+
+message UserExtraDataWire {
+  string document = 1;
+  string company_name = 2;
+}
