@@ -5,6 +5,7 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 	"google.golang.org/protobuf/compiler/protogen"
 
+	"github.com/mikros-dev/protoc-gen-openapi/internal/settings"
 	openapipb "github.com/mikros-dev/protoc-gen-openapi/openapi"
 )
 
@@ -27,7 +28,7 @@ type Server struct {
 	Description string `yaml:"description,omitempty"`
 }
 
-func FromProto(plugin *protogen.Plugin, ctx *mcontext.Context) (*Openapi, error) {
+func FromProto(plugin *protogen.Plugin, ctx *mcontext.Context, settings *settings.Settings) (*Openapi, error) {
 	pkg, err := protobuf.Parse(protobuf.ParseOptions{
 		Plugin: plugin,
 	})
@@ -40,7 +41,7 @@ func FromProto(plugin *protogen.Plugin, ctx *mcontext.Context) (*Openapi, error)
 		return nil, err
 	}
 
-	components, err := parseComponents(pkg)
+	components, err := parseComponents(pkg, settings)
 	if err != nil {
 		return nil, err
 	}

@@ -3,6 +3,8 @@ package openapi
 import (
 	mextensionspb "github.com/mikros-dev/protoc-gen-mikros-extensions/mikros/extensions"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
+
+	"github.com/mikros-dev/protoc-gen-openapi/internal/settings"
 )
 
 type Components struct {
@@ -11,8 +13,8 @@ type Components struct {
 	Security  map[string]*Security `yaml:"securitySchemes"`
 }
 
-func parseComponents(pkg *protobuf.Protobuf) (*Components, error) {
-	schemas, err := parseComponentsSchemas(pkg)
+func parseComponents(pkg *protobuf.Protobuf, settings *settings.Settings) (*Components, error) {
+	schemas, err := parseComponentsSchemas(pkg, settings)
 	if err != nil {
 		return nil, err
 	}
@@ -24,10 +26,10 @@ func parseComponents(pkg *protobuf.Protobuf) (*Components, error) {
 	}, nil
 }
 
-func parseComponentsSchemas(pkg *protobuf.Protobuf) (map[string]*Schema, error) {
+func parseComponentsSchemas(pkg *protobuf.Protobuf, settings *settings.Settings) (map[string]*Schema, error) {
 	schemas := make(map[string]*Schema)
 
-	methodComponents, err := getMethodComponentsSchemas(pkg)
+	methodComponents, err := getMethodComponentsSchemas(pkg, settings)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +44,7 @@ func parseComponentsSchemas(pkg *protobuf.Protobuf) (map[string]*Schema, error) 
 	return schemas, nil
 }
 
-func getMethodComponentsSchemas(pkg *protobuf.Protobuf) (map[string]*Schema, error) {
+func getMethodComponentsSchemas(pkg *protobuf.Protobuf, settings *settings.Settings) (map[string]*Schema, error) {
 	schemas := make(map[string]*Schema)
 	for _, method := range pkg.Service.Methods {
 		var (
@@ -61,7 +63,7 @@ func getMethodComponentsSchemas(pkg *protobuf.Protobuf) (map[string]*Schema, err
 			return nil, err
 		}
 
-		requests, err := getMessageSchemas(request, pkg, httpRule, methodExtensions, pathParameters)
+		requests, err := getMessageSchemas(request, pkg, httpRule, methodExtensions, pathParameters, settings)
 		if err != nil {
 			return nil, err
 		}
@@ -69,7 +71,7 @@ func getMethodComponentsSchemas(pkg *protobuf.Protobuf) (map[string]*Schema, err
 			schemas[name] = schema
 		}
 
-		responses, err := getMessageSchemas(response, pkg, httpRule, methodExtensions, pathParameters)
+		responses, err := getMessageSchemas(response, pkg, httpRule, methodExtensions, pathParameters, settings)
 		if err != nil {
 			return nil, err
 		}

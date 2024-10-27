@@ -9,6 +9,7 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 	"google.golang.org/genproto/googleapis/api/annotations"
 
+	"github.com/mikros-dev/protoc-gen-openapi/internal/settings"
 	openapipb "github.com/mikros-dev/protoc-gen-openapi/openapi"
 )
 
@@ -37,6 +38,7 @@ func getMessageSchemas(
 	httpRule *annotations.HttpRule,
 	methodExtensions *mextensionspb.MikrosMethodExtensions,
 	pathParameters []string,
+	settings *settings.Settings,
 ) (map[string]*Schema, error) {
 	var (
 		schemas            = make(map[string]*Schema)
@@ -66,7 +68,7 @@ func getMessageSchemas(
 			}
 
 			// Build the child message schema
-			childSchemas, err := getMessageSchemas(childMessage, pkg, httpRule, methodExtensions, pathParameters)
+			childSchemas, err := getMessageSchemas(childMessage, pkg, httpRule, methodExtensions, pathParameters, settings)
 			if err != nil {
 				return nil, err
 			}
@@ -76,7 +78,7 @@ func getMessageSchemas(
 			}
 
 			// And adds as a property inside the main schema
-			fieldSchema := newRefSchema(field, trimPackageName(field.TypeName), pkg)
+			fieldSchema := newRefSchema(field, trimPackageName(field.TypeName), pkg, settings)
 			schemaProperties[field.Name] = fieldSchema
 			if fieldSchema.IsRequired() {
 				requiredProperties = append(requiredProperties, field.Name)
@@ -95,7 +97,7 @@ func getMessageSchemas(
 			continue
 		}
 
-		fieldSchema := newSchemaFromProtobufField(field, pkg)
+		fieldSchema := newSchemaFromProtobufField(field, pkg, settings)
 		schemaProperties[field.Name] = fieldSchema
 		if fieldSchema.IsRequired() {
 			requiredProperties = append(requiredProperties, field.Name)
@@ -103,7 +105,7 @@ func getMessageSchemas(
 
 		// Check if fieldSchema has an additionalProperty to be added as a schema.
 		if fieldSchema.HasAdditionalProperties() {
-			additionalSchemas, err := fieldSchema.GetAdditionalPropertySchemas(field, pkg)
+			additionalSchemas, err := fieldSchema.GetAdditionalPropertySchemas(field, pkg, settings)
 			if err != nil {
 				return nil, err
 			}

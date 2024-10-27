@@ -46,7 +46,7 @@ func BuildContext(plugin *protogen.Plugin, pluginArgs *args.Args) (*Context, err
 	}
 
 	// Build the api specific context
-	api, err := openapi.FromProto(plugin, ctx)
+	api, err := openapi.FromProto(plugin, ctx, cfg)
 	if err != nil {
 		return nil, err
 	}

@@ -1,8 +1,8 @@
 
 [general]
 debug = true
-remove_enum_prefix = false
-remove_unspecified_enum = false
+remove_enum_prefix = true
+remove_unspecified_enum = true
 output_path = "openapi"
 
 [mikros]

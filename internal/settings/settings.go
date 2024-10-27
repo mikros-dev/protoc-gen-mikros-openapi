@@ -22,8 +22,8 @@ type Mikros struct {
 
 type General struct {
 	Debug                 bool   `toml:"debug" default:"false"`
-	RemoveEnumPrefix      bool   `toml:"remove_enum_prefix" default:"true"`
-	RemoveUnspecifiedEnum bool   `toml:"remove_unspecified_enum" default:"true"`
+	RemoveEnumPrefix      bool   `toml:"remove_enum_prefix" default:"false"`
+	RemoveUnspecifiedEnum bool   `toml:"remove_unspecified_enum" default:"false"`
 	OutputPath            string `toml:"output_path" default:"openapi"`
 }
 
