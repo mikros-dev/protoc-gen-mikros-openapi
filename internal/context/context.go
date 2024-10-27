@@ -5,11 +5,11 @@ import (
 
 	"github.com/goccy/go-yaml"
 	mcontext "github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/context"
-	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/settings"
 	"google.golang.org/protobuf/compiler/protogen"
 
 	"github.com/mikros-dev/protoc-gen-openapi/internal/args"
 	"github.com/mikros-dev/protoc-gen-openapi/internal/openapi"
+	"github.com/mikros-dev/protoc-gen-openapi/internal/settings"
 )
 
 type Context struct {
@@ -25,14 +25,16 @@ func BuildContext(plugin *protogen.Plugin, pluginArgs *args.Args) (*Context, err
 	if err != nil {
 		return nil, fmt.Errorf("could not load Settings file: %w", err)
 	}
-	if err := cfg.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid Settings: %w", err)
+
+	msettings, err := cfg.MikrosSettings()
+	if err != nil {
+		return nil, err
 	}
 
 	// Build Mikros-extensions context to have some data properly loaded.
 	ctx, err := mcontext.BuildContext(mcontext.BuildContextOptions{
 		PluginName: pluginArgs.GetPluginName(),
-		Settings:   cfg,
+		Settings:   msettings,
 		Plugin:     plugin,
 	})
 	if err != nil {

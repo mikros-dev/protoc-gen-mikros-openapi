@@ -1,0 +1,10 @@
+
+[general]
+debug = true
+remove_enum_prefix = false
+remove_unspecified_enum = false
+output_path = "openapi"
+
+[mikros]
+use_suffixed = false
+settings_filename = "protoc-gen-mikros-extensions.toml"

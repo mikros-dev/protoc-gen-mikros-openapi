@@ -29,6 +29,3 @@ custom.contract_code.name = "v.ContractCode"
 custom.product.name = "v.Product"
 custom.any_id.name = "v.AnyID"
 custom.id.name = "v.ID"
-
-[addons]
-path = "addons"
