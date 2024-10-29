@@ -1,11 +1,15 @@
 package openapi
 
 import (
+	"errors"
 	"slices"
+	"strings"
 
+	"github.com/juliangruber/go-intersect"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
+	"github.com/mikros-dev/protoc-gen-openapi/internal/settings"
 	openapipb "github.com/mikros-dev/protoc-gen-openapi/openapi"
 )
 
@@ -23,13 +27,15 @@ type Schema struct {
 	Properties           map[string]*Schema `yaml:"properties,omitempty"`
 	AdditionalProperties *Schema            `yaml:"additionalProperties,omitempty"`
 	AnyOf                []*Schema          `yaml:"anyOf,omitempty"`
+	Message              *protobuf.Message  `yaml:"-"`
 
 	schemaType SchemaType
 	required   bool
+	field      *protobuf.Field
 }
 
-func newRefSchema(field *protobuf.Field, refDestination string, pkg *protobuf.Protobuf) *Schema {
-	schema := newSchemaFromProtobufField(field, pkg)
+func newRefSchema(field *protobuf.Field, refDestination string, pkg *protobuf.Protobuf, settings *settings.Settings) *Schema {
+	schema := newSchemaFromProtobufField(field, pkg, settings)
 
 	if schema.Type == SchemaType_Array.String() {
 		schema.Items = &Schema{
@@ -45,11 +51,12 @@ func newRefSchema(field *protobuf.Field, refDestination string, pkg *protobuf.Pr
 	return schema
 }
 
-func newSchemaFromProtobufField(field *protobuf.Field, pkg *protobuf.Protobuf) *Schema {
+func newSchemaFromProtobufField(field *protobuf.Field, pkg *protobuf.Protobuf, settings *settings.Settings) *Schema {
 	var (
 		properties = openapipb.LoadFieldExtensions(field.Proto)
 		schema     = &Schema{
-			Type: schemaTypeFromProtobufField(field).String(),
+			Type:  schemaTypeFromProtobufField(field).String(),
+			field: field, // Saves the field to be used later.
 		}
 	)
 
@@ -64,7 +71,7 @@ func newSchemaFromProtobufField(field *protobuf.Field, pkg *protobuf.Protobuf) *
 	}
 
 	if field.IsEnum() {
-		schema.Enum = getEnumValues(field, pkg)
+		schema.Enum = getEnumValues(field, pkg, settings)
 	}
 
 	if field.IsProtoStruct() {
@@ -131,7 +138,7 @@ func schemaTypeFromMapType(mapType protoreflect.Kind) SchemaType {
 	return SchemaType_Integer
 }
 
-func getEnumValues(field *protobuf.Field, pkg *protobuf.Protobuf) []string {
+func getEnumValues(field *protobuf.Field, pkg *protobuf.Protobuf, settings *settings.Settings) []string {
 	var (
 		enums       []*protobuf.Enum
 		packageName = getPackageName(field.TypeName)
@@ -151,8 +158,19 @@ func getEnumValues(field *protobuf.Field, pkg *protobuf.Protobuf) []string {
 		return enum.Name == trimPackageName(field.TypeName)
 	})
 	if index != -1 {
+		var prefix string
+		if settings.General.RemoveEnumPrefix {
+			prefix = getEnumPrefix(enums[index])
+		}
+
 		for _, e := range enums[index].Values {
-			values = append(values, e.ProtoName)
+			if settings.General.RemoveUnspecifiedEnum {
+				if strings.HasSuffix(e.ProtoName, "_UNSPECIFIED") {
+					continue
+				}
+			}
+
+			values = append(values, strings.TrimPrefix(e.ProtoName, prefix))
 		}
 	}
 
@@ -176,6 +194,31 @@ func loadForeignEnums(enumType string, pkg *protobuf.Protobuf) []*protobuf.Enum 
 	return enums
 }
 
+func getEnumPrefix(enum *protobuf.Enum) string {
+	if len(enum.Values) <= 1 {
+		return ""
+	}
+
+	return enumStringsIntersection(enum.Values[0].ProtoName, enum.Values[1].ProtoName)
+}
+
+func enumStringsIntersection(s1, s2 string) string {
+	p1 := strings.Split(s1, "_")
+	p2 := strings.Split(s2, "_")
+
+	i := intersect.Simple(p1, p2)
+	if len(i) == 0 {
+		return ""
+	}
+
+	var parts []string
+	for _, s := range i {
+		parts = append(parts, s.(string))
+	}
+
+	return strings.Join(parts, "_") + "_"
+}
+
 func (s *Schema) IsRequired() bool {
 	return s.required
 }
@@ -184,9 +227,9 @@ func (s *Schema) HasAdditionalProperties() bool {
 	return s.AdditionalProperties != nil && s.AdditionalProperties != &Schema{}
 }
 
-func (s *Schema) GetAdditionalPropertySchemas(field *protobuf.Field, pkg *protobuf.Protobuf) (map[string]*Schema, error) {
+func (s *Schema) GetAdditionalPropertySchemas(field *protobuf.Field, pkg *protobuf.Protobuf, settings *settings.Settings) (map[string]*Schema, error) {
 	if field.MapValueTypeKind() == protoreflect.MessageKind {
-		return getMessageAdditionalSchema(field, pkg)
+		return getMessageAdditionalSchema(field, pkg, settings)
 	}
 
 	if field.MapValueTypeKind() == protoreflect.EnumKind {
@@ -198,7 +241,7 @@ func (s *Schema) GetAdditionalPropertySchemas(field *protobuf.Field, pkg *protob
 	return nil, nil
 }
 
-func getMessageAdditionalSchema(field *protobuf.Field, pkg *protobuf.Protobuf) (map[string]*Schema, error) {
+func getMessageAdditionalSchema(field *protobuf.Field, pkg *protobuf.Protobuf, settings *settings.Settings) (map[string]*Schema, error) {
 	var (
 		packageName = getPackageName(field.MapValueTypeName())
 		messages    []*protobuf.Message
@@ -222,10 +265,29 @@ func getMessageAdditionalSchema(field *protobuf.Field, pkg *protobuf.Protobuf) (
 		return msg.Name == trimPackageName(field.MapValueTypeName())
 	})
 	if index != -1 {
-		return getMessageSchemas(messages[index], pkg, nil, nil, nil)
+		return getMessageSchemas(messages[index], pkg, nil, nil, nil, settings)
 	}
 
 	return nil, nil
+}
+
+func loadForeignMessages(msgType string, pkg *protobuf.Protobuf) ([]*protobuf.Message, error) {
+	var (
+		foreignPackage = getPackageName(msgType)
+		messages       []*protobuf.Message
+	)
+
+	// Load foreign messages
+	for _, f := range pkg.Files {
+		if f.Proto.GetPackage() == foreignPackage {
+			messages = protobuf.ParseMessagesFromFile(f, f.Proto.GetPackage())
+		}
+	}
+	if len(messages) == 0 {
+		return nil, errors.New("could not load foreign messages")
+	}
+
+	return messages, nil
 }
 
 func getEnumAdditionalSchema(field *protobuf.Field, pkg *protobuf.Protobuf) *Schema {
@@ -256,4 +318,8 @@ func getEnumAdditionalSchema(field *protobuf.Field, pkg *protobuf.Protobuf) *Sch
 	}
 
 	return schema
+}
+
+func (s *Schema) ProtoField() *protobuf.Field {
+	return s.field
 }

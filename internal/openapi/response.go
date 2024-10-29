@@ -3,7 +3,10 @@ package openapi
 import (
 	"fmt"
 
+	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/converters"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
+
+	"github.com/mikros-dev/protoc-gen-openapi/internal/settings"
 	openapipb "github.com/mikros-dev/protoc-gen-openapi/openapi"
 )
 
@@ -13,18 +16,25 @@ type Response struct {
 	schemaName  string
 }
 
-func parseOperationResponses(method *protobuf.Method) map[string]*Response {
+func parseOperationResponses(method *protobuf.Method, settings *settings.Settings, converter *converters.Message) map[string]*Response {
 	codes := getMethodResponseCodes(method)
 	if len(codes) == 0 {
 		return nil
 	}
 
-	responses := make(map[string]*Response)
+	var (
+		responses = make(map[string]*Response)
+		name      = method.ResponseType.Name
+	)
+
+	if settings.Mikros.UseOutboundMessages {
+		name = converter.WireOutputToOutbound(name)
+	}
 
 	for _, code := range codes {
 		refName := refComponentsSchemas + "DefaultError"
 		if isSuccessCode(code) {
-			refName = refComponentsSchemas + method.ResponseType.Name
+			refName = refComponentsSchemas + name
 		}
 
 		responses[fmt.Sprintf("%d", code.GetCode())] = &Response{

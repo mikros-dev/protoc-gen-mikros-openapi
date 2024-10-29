@@ -4,8 +4,10 @@ import (
 	"strings"
 
 	mextensionspb "github.com/mikros-dev/protoc-gen-mikros-extensions/mikros/extensions"
+	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/converters"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 
+	"github.com/mikros-dev/protoc-gen-openapi/internal/settings"
 	openapipb "github.com/mikros-dev/protoc-gen-openapi/openapi"
 )
 
@@ -27,11 +29,16 @@ type Operation struct {
 	endpoint string
 }
 
-func parsePathItems(pkg *protobuf.Protobuf) (map[string]map[string]*Operation, error) {
-	pathItems := make(map[string]map[string]*Operation)
+func parsePathItems(pkg *protobuf.Protobuf, settings *settings.Settings) (map[string]map[string]*Operation, error) {
+	var (
+		pathItems = make(map[string]map[string]*Operation)
+		converter = converters.NewMessage(converters.MessageOptions{
+			Settings: settings.MikrosSettings,
+		})
+	)
 
 	for _, method := range pkg.Service.Methods {
-		operation, err := parseOperation(method, pkg)
+		operation, err := parseOperation(method, pkg, settings, converter)
 		if err != nil {
 			return nil, err
 		}
@@ -53,7 +60,7 @@ func parsePathItems(pkg *protobuf.Protobuf) (map[string]map[string]*Operation, e
 	return pathItems, nil
 }
 
-func parseOperation(method *protobuf.Method, pkg *protobuf.Protobuf) (*Operation, error) {
+func parseOperation(method *protobuf.Method, pkg *protobuf.Protobuf, settings *settings.Settings, converter *converters.Message) (*Operation, error) {
 	googleAnnotations := mextensionspb.LoadGoogleAnnotations(method.Proto)
 	if googleAnnotations == nil {
 		return nil, nil
@@ -65,7 +72,7 @@ func parseOperation(method *protobuf.Method, pkg *protobuf.Protobuf) (*Operation
 		return nil, nil
 	}
 
-	parameters, err := parseOperationParameters(method, googleAnnotations, pkg)
+	parameters, err := parseOperationParameters(method, googleAnnotations, pkg, settings)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +85,7 @@ func parseOperation(method *protobuf.Method, pkg *protobuf.Protobuf) (*Operation
 		Id:              method.Name,
 		Tags:            extensions.GetTags(),
 		Parameters:      parameters,
-		Responses:       parseOperationResponses(method),
+		Responses:       parseOperationResponses(method, settings, converter),
 		RequestBody:     parseRequestBody(method, m, pkg),
 		SecuritySchemes: parseOperationSecurity(pkg),
 	}, nil

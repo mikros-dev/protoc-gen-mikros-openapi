@@ -4,9 +4,17 @@ package services.user;
 
 option go_package = "examples/gen/go/services/user;user";
 
+import "mikros/extensions/extensions.proto";
 import "services/common/common.proto";
 
 message UserWire {
+  option (mikros.extensions.message_options) = {
+    outbound: {
+      export: true
+      naming_mode: NAMING_MODE_CAMEL_CASE
+    }
+  };
+
   string id = 1;
   string name = 2;
   common.Status status = 3;
@@ -16,12 +24,24 @@ message UserWire {
 }
 
 message UserAdditionalInfoWire {
+  option (mikros.extensions.message_options) = {
+    outbound: {
+      export: true
+    }
+  };
+
   string address = 1;
   string city = 2;
   UserExtraDataWire extra_data = 3;
 }
 
 message UserExtraDataWire {
+  option (mikros.extensions.message_options) = {
+    outbound: {
+      export: true
+    }
+  };
+
   string document = 1;
   string company_name = 2;
 }

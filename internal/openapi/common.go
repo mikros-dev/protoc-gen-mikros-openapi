@@ -9,6 +9,7 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 	"google.golang.org/genproto/googleapis/api/annotations"
 
+	"github.com/mikros-dev/protoc-gen-openapi/internal/settings"
 	openapipb "github.com/mikros-dev/protoc-gen-openapi/openapi"
 )
 
@@ -20,23 +21,13 @@ func isSuccessCode(code *openapipb.Response) bool {
 	return code.GetCode() == openapipb.ResponseCode_RESPONSE_CODE_OK || code.GetCode() == openapipb.ResponseCode_RESPONSE_CODE_CREATED
 }
 
-func findMessage(msgName string, pkg *protobuf.Protobuf) (*protobuf.Message, error) {
-	msgIndex := slices.IndexFunc(pkg.Messages, func(msg *protobuf.Message) bool {
-		return msg.Name == msgName
-	})
-	if msgIndex == -1 {
-		return nil, fmt.Errorf("could not find message '%s'", msgName)
-	}
-
-	return pkg.Messages[msgIndex], nil
-}
-
 func getMessageSchemas(
 	message *protobuf.Message,
 	pkg *protobuf.Protobuf,
 	httpRule *annotations.HttpRule,
 	methodExtensions *mextensionspb.MikrosMethodExtensions,
 	pathParameters []string,
+	settings *settings.Settings,
 ) (map[string]*Schema, error) {
 	var (
 		schemas            = make(map[string]*Schema)
@@ -66,7 +57,7 @@ func getMessageSchemas(
 			}
 
 			// Build the child message schema
-			childSchemas, err := getMessageSchemas(childMessage, pkg, httpRule, methodExtensions, pathParameters)
+			childSchemas, err := getMessageSchemas(childMessage, pkg, httpRule, methodExtensions, pathParameters, settings)
 			if err != nil {
 				return nil, err
 			}
@@ -76,7 +67,7 @@ func getMessageSchemas(
 			}
 
 			// And adds as a property inside the main schema
-			fieldSchema := newRefSchema(field, trimPackageName(field.TypeName), pkg)
+			fieldSchema := newRefSchema(field, trimPackageName(field.TypeName), pkg, settings)
 			schemaProperties[field.Name] = fieldSchema
 			if fieldSchema.IsRequired() {
 				requiredProperties = append(requiredProperties, field.Name)
@@ -95,7 +86,7 @@ func getMessageSchemas(
 			continue
 		}
 
-		fieldSchema := newSchemaFromProtobufField(field, pkg)
+		fieldSchema := newSchemaFromProtobufField(field, pkg, settings)
 		schemaProperties[field.Name] = fieldSchema
 		if fieldSchema.IsRequired() {
 			requiredProperties = append(requiredProperties, field.Name)
@@ -103,7 +94,7 @@ func getMessageSchemas(
 
 		// Check if fieldSchema has an additionalProperty to be added as a schema.
 		if fieldSchema.HasAdditionalProperties() {
-			additionalSchemas, err := fieldSchema.GetAdditionalPropertySchemas(field, pkg)
+			additionalSchemas, err := fieldSchema.GetAdditionalPropertySchemas(field, pkg, settings)
 			if err != nil {
 				return nil, err
 			}
@@ -123,6 +114,7 @@ func getMessageSchemas(
 		Type:       SchemaType_Object.String(),
 		Properties: schemaProperties,
 		Required:   requiredProperties,
+		Message:    message,
 	}
 
 	return schemas, nil
@@ -158,25 +150,6 @@ func findForeignMessage(msgType string, pkg *protobuf.Protobuf) (*protobuf.Messa
 	}
 
 	return messages[msgIndex], nil
-}
-
-func loadForeignMessages(msgType string, pkg *protobuf.Protobuf) ([]*protobuf.Message, error) {
-	var (
-		foreignPackage = getPackageName(msgType)
-		messages       []*protobuf.Message
-	)
-
-	// Load foreign messages
-	for _, f := range pkg.Files {
-		if f.Proto.GetPackage() == foreignPackage {
-			messages = protobuf.ParseMessagesFromFile(f, f.Proto.GetPackage())
-		}
-	}
-	if len(messages) == 0 {
-		return nil, fmt.Errorf("could not load foreign messages")
-	}
-
-	return messages, nil
 }
 
 func getPackageName(msgType string) string {
