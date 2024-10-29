@@ -13,11 +13,14 @@ import (
 type Settings struct {
 	General *General `toml:"general" default:"{}"`
 	Mikros  *Mikros  `toml:"mikros" default:"{}"`
+
+	MikrosSettings *msettings.Settings
 }
 
 type Mikros struct {
-	UseSuffixes      bool   `toml:"use_suffixes"`
-	SettingsFilename string `toml:"settings_filename"`
+	UseOutboundMessages bool   `toml:"use_outbound_messages" default:"false"`
+	UseInboundMessages  bool   `toml:"use_inbound_messages" default:"false"`
+	SettingsFilename    string `toml:"settings_filename"`
 }
 
 type General struct {
@@ -50,6 +53,15 @@ func LoadSettings(filename string) (*Settings, error) {
 		return nil, err
 	}
 
+	cfg, err := msettings.LoadSettings(settings.Mikros.SettingsFilename)
+	if err != nil {
+		return nil, fmt.Errorf("could not load mikros plugin settings file: %w", err)
+	}
+	if err := cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid Settings: %w", err)
+	}
+	settings.MikrosSettings = cfg
+
 	return &settings, nil
 }
 
@@ -60,16 +72,4 @@ func loadDefaultSettings() (*Settings, error) {
 	}
 
 	return s, nil
-}
-
-func (s *Settings) MikrosSettings() (*msettings.Settings, error) {
-	cfg, err := msettings.LoadSettings(s.Mikros.SettingsFilename)
-	if err != nil {
-		return nil, fmt.Errorf("could not load mikros plugin settings file: %w", err)
-	}
-	if err := cfg.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid Settings: %w", err)
-	}
-
-	return cfg, nil
 }

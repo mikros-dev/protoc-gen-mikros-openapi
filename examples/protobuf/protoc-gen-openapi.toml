@@ -6,5 +6,6 @@ remove_unspecified_enum = true
 output_path = "openapi"
 
 [mikros]
-use_suffixes = false
+use_outbound_messages = true
+use_inbound_messages = true
 settings_filename = "protoc-gen-mikros-extensions.toml"

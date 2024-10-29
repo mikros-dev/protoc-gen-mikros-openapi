@@ -1,7 +1,11 @@
 package openapi
 
 import (
+	"fmt"
+	"slices"
+
 	mextensionspb "github.com/mikros-dev/protoc-gen-mikros-extensions/mikros/extensions"
+	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/converters"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 
 	"github.com/mikros-dev/protoc-gen-openapi/internal/settings"
@@ -45,7 +49,13 @@ func parseComponentsSchemas(pkg *protobuf.Protobuf, settings *settings.Settings)
 }
 
 func getMethodComponentsSchemas(pkg *protobuf.Protobuf, settings *settings.Settings) (map[string]*Schema, error) {
-	schemas := make(map[string]*Schema)
+	var (
+		schemas   = make(map[string]*Schema)
+		converter = converters.NewMessage(converters.MessageOptions{
+			Settings: settings.MikrosSettings,
+		})
+	)
+
 	for _, method := range pkg.Service.Methods {
 		var (
 			httpRule          = mextensionspb.LoadGoogleAnnotations(method.Proto)
@@ -67,6 +77,9 @@ func getMethodComponentsSchemas(pkg *protobuf.Protobuf, settings *settings.Setti
 		if err != nil {
 			return nil, err
 		}
+		if settings.Mikros.UseInboundMessages {
+			requests = processInboundMessages(requests)
+		}
 		for name, schema := range requests {
 			schemas[name] = schema
 		}
@@ -75,12 +88,112 @@ func getMethodComponentsSchemas(pkg *protobuf.Protobuf, settings *settings.Setti
 		if err != nil {
 			return nil, err
 		}
+		if settings.Mikros.UseOutboundMessages {
+			responses = processOutboundMessages(responses, settings)
+		}
 		for name, schema := range responses {
+			if settings.Mikros.UseOutboundMessages {
+				name = converter.WireOutputToOutbound(name)
+			}
+
 			schemas[name] = schema
 		}
 	}
 
 	return schemas, nil
+}
+
+func findMessage(msgName string, pkg *protobuf.Protobuf) (*protobuf.Message, error) {
+	msgIndex := slices.IndexFunc(pkg.Messages, func(msg *protobuf.Message) bool {
+		return msg.Name == msgName
+	})
+	if msgIndex == -1 {
+		return nil, fmt.Errorf("could not find message '%s'", msgName)
+	}
+
+	return pkg.Messages[msgIndex], nil
+}
+
+func processInboundMessages(schemas map[string]*Schema) map[string]*Schema {
+	for _, schema := range schemas {
+		if len(schema.Properties) > 0 {
+			properties := make(map[string]*Schema)
+			for _, property := range schema.Properties {
+				converter, _ := converters.NewField(converters.FieldOptions{
+					IsHTTPService: true,
+					ProtoField:    property.field,
+					ProtoMessage:  schema.Message,
+				})
+				properties[converter.InboundName()] = property
+			}
+			schema.Properties = properties
+		}
+	}
+
+	return schemas
+}
+
+func processOutboundMessages(schemas map[string]*Schema, settings *settings.Settings) map[string]*Schema {
+	for _, schema := range schemas {
+		if schemaNeedsConversion(schema) {
+			converter := converters.NewMessage(converters.MessageOptions{
+				Settings: settings.MikrosSettings,
+			})
+
+			if schema.Ref != "" {
+				schema.Ref = converter.WireOutputToOutbound(schema.Ref)
+			}
+
+			if len(schema.Properties) > 0 {
+				properties := make(map[string]*Schema)
+				for _, property := range schema.Properties {
+					if property.Ref != "" {
+						property.Ref = converter.WireOutputToOutbound(property.Ref)
+					}
+
+					if property.AdditionalProperties != nil && property.AdditionalProperties.Ref != "" {
+						property.AdditionalProperties.Ref = converter.WireOutputToOutbound(property.AdditionalProperties.Ref)
+					}
+
+					if property.Items != nil && property.Items.Ref != "" {
+						property.Items.Ref = converter.WireOutputToOutbound(property.Items.Ref)
+					}
+
+					fieldConverter, _ := converters.NewField(converters.FieldOptions{
+						IsHTTPService: true,
+						ProtoField:    property.field,
+						ProtoMessage:  schema.Message,
+					})
+					properties[fieldConverter.OutboundJsonTagFieldName()] = property
+				}
+				schema.Properties = properties
+			}
+		}
+	}
+
+	return schemas
+}
+
+func schemaNeedsConversion(schema *Schema) bool {
+	var propertyRef bool
+	for _, property := range schema.Properties {
+		if property.Ref != "" {
+			propertyRef = true
+			break
+		}
+
+		if property.AdditionalProperties != nil && property.AdditionalProperties.Ref != "" {
+			propertyRef = true
+			break
+		}
+
+		if property.Items != nil && property.Items.Ref != "" {
+			propertyRef = true
+			break
+		}
+	}
+
+	return schema.Ref != "" || propertyRef
 }
 
 func getErrorComponentsSchemas() map[string]*Schema {

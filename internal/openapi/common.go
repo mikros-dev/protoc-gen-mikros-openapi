@@ -21,17 +21,6 @@ func isSuccessCode(code *openapipb.Response) bool {
 	return code.GetCode() == openapipb.ResponseCode_RESPONSE_CODE_OK || code.GetCode() == openapipb.ResponseCode_RESPONSE_CODE_CREATED
 }
 
-func findMessage(msgName string, pkg *protobuf.Protobuf) (*protobuf.Message, error) {
-	msgIndex := slices.IndexFunc(pkg.Messages, func(msg *protobuf.Message) bool {
-		return msg.Name == msgName
-	})
-	if msgIndex == -1 {
-		return nil, fmt.Errorf("could not find message '%s'", msgName)
-	}
-
-	return pkg.Messages[msgIndex], nil
-}
-
 func getMessageSchemas(
 	message *protobuf.Message,
 	pkg *protobuf.Protobuf,
@@ -125,6 +114,7 @@ func getMessageSchemas(
 		Type:       SchemaType_Object.String(),
 		Properties: schemaProperties,
 		Required:   requiredProperties,
+		Message:    message,
 	}
 
 	return schemas, nil
@@ -160,25 +150,6 @@ func findForeignMessage(msgType string, pkg *protobuf.Protobuf) (*protobuf.Messa
 	}
 
 	return messages[msgIndex], nil
-}
-
-func loadForeignMessages(msgType string, pkg *protobuf.Protobuf) ([]*protobuf.Message, error) {
-	var (
-		foreignPackage = getPackageName(msgType)
-		messages       []*protobuf.Message
-	)
-
-	// Load foreign messages
-	for _, f := range pkg.Files {
-		if f.Proto.GetPackage() == foreignPackage {
-			messages = protobuf.ParseMessagesFromFile(f, f.Proto.GetPackage())
-		}
-	}
-	if len(messages) == 0 {
-		return nil, fmt.Errorf("could not load foreign messages")
-	}
-
-	return messages, nil
 }
 
 func getPackageName(msgType string) string {

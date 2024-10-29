@@ -57,8 +57,8 @@ func handleProtogenPlugin(plugin *protogen.Plugin, pluginArgs *args.Args) (strin
 	}
 
 	output.Enable(ctx.Settings.General.Debug)
-	output.Println("processing module:", ctx.Mikros.ModuleName)
+	output.Println("processing module:", ctx.Openapi.ModuleName())
 
 	content, err := ctx.OutputOpenapi()
-	return content, filepath.Join(ctx.Settings.General.OutputPath, ctx.Mikros.ModuleName), err
+	return content, filepath.Join(ctx.Settings.General.OutputPath, ctx.Openapi.ModuleName()), err
 }

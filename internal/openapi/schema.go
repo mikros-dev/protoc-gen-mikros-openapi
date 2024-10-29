@@ -1,6 +1,7 @@
 package openapi
 
 import (
+	"errors"
 	"slices"
 	"strings"
 
@@ -26,9 +27,11 @@ type Schema struct {
 	Properties           map[string]*Schema `yaml:"properties,omitempty"`
 	AdditionalProperties *Schema            `yaml:"additionalProperties,omitempty"`
 	AnyOf                []*Schema          `yaml:"anyOf,omitempty"`
+	Message              *protobuf.Message  `yaml:"-"`
 
 	schemaType SchemaType
 	required   bool
+	field      *protobuf.Field
 }
 
 func newRefSchema(field *protobuf.Field, refDestination string, pkg *protobuf.Protobuf, settings *settings.Settings) *Schema {
@@ -52,7 +55,8 @@ func newSchemaFromProtobufField(field *protobuf.Field, pkg *protobuf.Protobuf, s
 	var (
 		properties = openapipb.LoadFieldExtensions(field.Proto)
 		schema     = &Schema{
-			Type: schemaTypeFromProtobufField(field).String(),
+			Type:  schemaTypeFromProtobufField(field).String(),
+			field: field, // Saves the field to be used later.
 		}
 	)
 
@@ -267,6 +271,25 @@ func getMessageAdditionalSchema(field *protobuf.Field, pkg *protobuf.Protobuf, s
 	return nil, nil
 }
 
+func loadForeignMessages(msgType string, pkg *protobuf.Protobuf) ([]*protobuf.Message, error) {
+	var (
+		foreignPackage = getPackageName(msgType)
+		messages       []*protobuf.Message
+	)
+
+	// Load foreign messages
+	for _, f := range pkg.Files {
+		if f.Proto.GetPackage() == foreignPackage {
+			messages = protobuf.ParseMessagesFromFile(f, f.Proto.GetPackage())
+		}
+	}
+	if len(messages) == 0 {
+		return nil, errors.New("could not load foreign messages")
+	}
+
+	return messages, nil
+}
+
 func getEnumAdditionalSchema(field *protobuf.Field, pkg *protobuf.Protobuf) *Schema {
 	var (
 		packageName = getPackageName(field.MapValueTypeName())
@@ -295,4 +318,8 @@ func getEnumAdditionalSchema(field *protobuf.Field, pkg *protobuf.Protobuf) *Sch
 	}
 
 	return schema
+}
+
+func (s *Schema) ProtoField() *protobuf.Field {
+	return s.field
 }

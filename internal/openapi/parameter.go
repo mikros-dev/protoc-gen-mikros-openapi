@@ -2,12 +2,15 @@ package openapi
 
 import (
 	"fmt"
-	mextensionspb "github.com/mikros-dev/protoc-gen-mikros-extensions/mikros/extensions"
-	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
-	"google.golang.org/genproto/googleapis/api/annotations"
 	"net/http"
 	"slices"
 
+	mextensionspb "github.com/mikros-dev/protoc-gen-mikros-extensions/mikros/extensions"
+	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/converters"
+	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
+	"google.golang.org/genproto/googleapis/api/annotations"
+
+	"github.com/mikros-dev/protoc-gen-openapi/internal/settings"
 	openapipb "github.com/mikros-dev/protoc-gen-openapi/openapi"
 )
 
@@ -19,7 +22,7 @@ type Parameter struct {
 	Schema      *Schema `yaml:"schema,omitempty"`
 }
 
-func parseOperationParameters(method *protobuf.Method, httpRule *annotations.HttpRule, pkg *protobuf.Protobuf) ([]*Parameter, error) {
+func parseOperationParameters(method *protobuf.Method, httpRule *annotations.HttpRule, pkg *protobuf.Protobuf, settings *settings.Settings) ([]*Parameter, error) {
 	requestMessage, err := findMethodRequestMessage(method, pkg)
 	if err != nil {
 		return nil, err
@@ -39,7 +42,11 @@ func parseOperationParameters(method *protobuf.Method, httpRule *annotations.Htt
 	}
 
 	for _, field := range requestMessage.Fields {
-		parameter := parseOperationParameter(method, field, pathParameters, httpRule)
+		parameter, err := parseOperationParameter(method, field, requestMessage, pathParameters, httpRule, settings)
+		if err != nil {
+			return nil, err
+		}
+
 		if httpMethod == http.MethodPut && parameter.Location == "body" {
 			// PUT body parameters should go with its schema, at the components
 			// section.
@@ -68,13 +75,26 @@ func getEndpointInformation(httpRule *annotations.HttpRule) ([]string, string) {
 	return mextensionspb.RetrieveParameters(endpoint), method
 }
 
-func parseOperationParameter(method *protobuf.Method, field *protobuf.Field, pathParameters []string, httpRule *annotations.HttpRule) *Parameter {
+func parseOperationParameter(method *protobuf.Method, field *protobuf.Field, message *protobuf.Message, pathParameters []string, httpRule *annotations.HttpRule, settings *settings.Settings) (*Parameter, error) {
 	var (
 		properties       = openapipb.LoadFieldExtensions(field.Proto)
 		methodExtensions = mextensionspb.LoadMethodExtensions(method.Proto)
 		location         = getFieldLocation(properties, httpRule, methodExtensions, field.Name, pathParameters)
+		name             = field.Name
 		description      string
 	)
+
+	if settings.Mikros.UseInboundMessages {
+		converter, err := converters.NewField(converters.FieldOptions{
+			IsHTTPService: true,
+			ProtoField:    field,
+			ProtoMessage:  message,
+		})
+		if err != nil {
+			return nil, err
+		}
+		name = converter.InboundName()
+	}
 
 	if properties != nil {
 		description = properties.GetDescription()
@@ -83,10 +103,10 @@ func parseOperationParameter(method *protobuf.Method, field *protobuf.Field, pat
 	return &Parameter{
 		Required:    getParameterMandatory(properties, location),
 		Location:    location,
-		Name:        field.Name,
+		Name:        name,
 		Description: description,
 		Schema:      getParameterSchema(properties, field),
-	}
+	}, nil
 }
 
 func getParameterMandatory(properties *openapipb.Property, location string) bool {

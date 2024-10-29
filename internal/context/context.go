@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/goccy/go-yaml"
-	mcontext "github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/context"
 	"google.golang.org/protobuf/compiler/protogen"
 
 	"github.com/mikros-dev/protoc-gen-openapi/internal/args"
@@ -15,7 +14,6 @@ import (
 type Context struct {
 	Openapi  *openapi.Openapi
 	Settings *settings.Settings
-	Mikros   *mcontext.Context
 }
 
 func BuildContext(plugin *protogen.Plugin, pluginArgs *args.Args) (*Context, error) {
@@ -26,33 +24,17 @@ func BuildContext(plugin *protogen.Plugin, pluginArgs *args.Args) (*Context, err
 		return nil, fmt.Errorf("could not load Settings file: %w", err)
 	}
 
-	msettings, err := cfg.MikrosSettings()
+	// Build the api specific context
+	api, err := openapi.FromProto(plugin, cfg)
 	if err != nil {
 		return nil, err
 	}
-
-	// Build Mikros-extensions context to have some data properly loaded.
-	ctx, err := mcontext.BuildContext(mcontext.BuildContextOptions{
-		PluginName: pluginArgs.GetPluginName(),
-		Settings:   msettings,
-		Plugin:     plugin,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("could not build templates context: %w", err)
-	}
-	if !ctx.IsHTTPService() {
+	if api == nil {
 		// If we're not an HTTP service, we don't need to continue.
 		return nil, nil
 	}
 
-	// Build the api specific context
-	api, err := openapi.FromProto(plugin, ctx, cfg)
-	if err != nil {
-		return nil, err
-	}
-
 	return &Context{
-		Mikros:   ctx,
 		Settings: cfg,
 		Openapi:  api,
 	}, nil

@@ -9,7 +9,7 @@ require (
 	github.com/creasty/defaults v1.8.0
 	github.com/goccy/go-yaml v1.12.0
 	github.com/juliangruber/go-intersect v1.1.0
-	github.com/mikros-dev/protoc-gen-mikros-extensions v0.3.0
+	github.com/mikros-dev/protoc-gen-mikros-extensions v0.4.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20240617180043-68d350f18fd4
 	google.golang.org/protobuf v1.35.1
 )
