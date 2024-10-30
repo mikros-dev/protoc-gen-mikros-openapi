@@ -190,7 +190,7 @@ extend google.protobuf.FieldOptions {
 }
 
 message Property {
-  required string description = 1;
+  optional string description = 1;
   optional string example = 2;
   optional PropertyFormat format = 3;
   optional bool required = 4;
