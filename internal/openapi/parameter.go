@@ -2,7 +2,6 @@ package openapi
 
 import (
 	"fmt"
-	"net/http"
 	"slices"
 
 	mextensionspb "github.com/mikros-dev/protoc-gen-mikros-extensions/mikros/extensions"
@@ -33,13 +32,9 @@ func parseOperationParameters(method *protobuf.Method, httpRule *annotations.Htt
 	}
 
 	var (
-		params                     []*Parameter
-		pathParameters, httpMethod = getEndpointInformation(httpRule)
+		params            []*Parameter
+		pathParameters, _ = getEndpointInformation(httpRule)
 	)
-
-	if httpMethod == http.MethodPost {
-		return nil, nil
-	}
 
 	for _, field := range requestMessage.Fields {
 		parameter, err := parseOperationParameter(method, field, requestMessage, pathParameters, httpRule, settings)
@@ -47,8 +42,8 @@ func parseOperationParameters(method *protobuf.Method, httpRule *annotations.Htt
 			return nil, err
 		}
 
-		if httpMethod == http.MethodPut && parameter.Location == "body" {
-			// PUT body parameters should go with its schema, at the components
+		if parameter.Location == "body" {
+			// Body parameters should go with its schema, at the components
 			// section.
 			continue
 		}
@@ -89,6 +84,7 @@ func parseOperationParameter(method *protobuf.Method, field *protobuf.Field, mes
 			IsHTTPService: true,
 			ProtoField:    field,
 			ProtoMessage:  message,
+			Settings:      settings.MikrosSettings,
 		})
 		if err != nil {
 			return nil, err

@@ -14,7 +14,7 @@ import (
 type Components struct {
 	Schemas   map[string]*Schema   `yaml:"schemas"`
 	Responses map[string]*Response `yaml:"responses"`
-	Security  map[string]*Security `yaml:"securitySchemes"`
+	Security  map[string]*Security `yaml:"securitySchemes,omitempty"`
 }
 
 func parseComponents(pkg *protobuf.Protobuf, settings *settings.Settings) (*Components, error) {
@@ -78,7 +78,7 @@ func getMethodComponentsSchemas(pkg *protobuf.Protobuf, settings *settings.Setti
 			return nil, err
 		}
 		if settings.Mikros.UseInboundMessages {
-			requests = processInboundMessages(requests)
+			requests = processInboundMessages(requests, settings)
 		}
 		for name, schema := range requests {
 			schemas[name] = schema
@@ -114,7 +114,7 @@ func findMessage(msgName string, pkg *protobuf.Protobuf) (*protobuf.Message, err
 	return pkg.Messages[msgIndex], nil
 }
 
-func processInboundMessages(schemas map[string]*Schema) map[string]*Schema {
+func processInboundMessages(schemas map[string]*Schema, settings *settings.Settings) map[string]*Schema {
 	for _, schema := range schemas {
 		if len(schema.Properties) > 0 {
 			properties := make(map[string]*Schema)
@@ -123,6 +123,7 @@ func processInboundMessages(schemas map[string]*Schema) map[string]*Schema {
 					IsHTTPService: true,
 					ProtoField:    property.field,
 					ProtoMessage:  schema.Message,
+					Settings:      settings.MikrosSettings,
 				})
 				properties[converter.InboundName()] = property
 			}

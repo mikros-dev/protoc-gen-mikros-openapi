@@ -105,11 +105,6 @@ func getMessageSchemas(
 		}
 	}
 
-	// Schemas without parameters don't need to be exported.
-	if len(schemaProperties) == 0 {
-		return nil, nil
-	}
-
 	schemas[message.Name] = &Schema{
 		Type:       SchemaType_Object.String(),
 		Properties: schemaProperties,
@@ -166,7 +161,7 @@ func getFieldLocation(
 ) string {
 	// Get the location from our own proto annotation.
 	if properties != nil && properties.GetLocation() != openapipb.PropertyLocation_PROPERTY_LOCATION_UNSPECIFIED {
-		return strings.TrimPrefix(properties.GetLocation().String(), "PROPERTY_LOCATION_")
+		return strings.ToLower(strings.TrimPrefix(properties.GetLocation().String(), "PROPERTY_LOCATION_"))
 	}
 
 	// Try to guess the location from field parameters.
