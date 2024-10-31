@@ -21,13 +21,18 @@ func isSuccessCode(code *openapipb.Response) bool {
 	return code.GetCode() == openapipb.ResponseCode_RESPONSE_CODE_OK || code.GetCode() == openapipb.ResponseCode_RESPONSE_CODE_CREATED
 }
 
-func getMessageSchemas(
+type MessageParser struct {
+	Package  *protobuf.Protobuf
+	Settings *settings.Settings
+
+	schemas map[string]bool
+}
+
+func (m *MessageParser) GetMessageSchemas(
 	message *protobuf.Message,
-	pkg *protobuf.Protobuf,
 	httpRule *annotations.HttpRule,
 	methodExtensions *mextensionspb.MikrosMethodExtensions,
 	pathParameters []string,
-	settings *settings.Settings,
 ) (map[string]*Schema, error) {
 	var (
 		schemas            = make(map[string]*Schema)
@@ -35,39 +40,46 @@ func getMessageSchemas(
 		requiredProperties []string
 	)
 
+	m.addParsedMessage(message.Name)
+
 	for _, field := range message.Fields {
 		if shouldHandleChildMessage(field) {
-			var (
-				childMessage *protobuf.Message
-			)
+			if !m.isMessageAlreadyParsed(trimPackageName(field.TypeName)) {
+				var (
+					childMessage *protobuf.Message
+				)
 
-			if field.IsMessageFromPackage() {
-				msg, err := findMessage(trimPackageName(field.TypeName), pkg)
+				if field.IsMessageFromPackage() {
+					msg, err := findMessage(trimPackageName(field.TypeName), m.Package)
+					if err != nil {
+						return nil, err
+					}
+					childMessage = msg
+				}
+				if field.IsMessage() && childMessage == nil {
+					msg, err := findForeignMessage(field.TypeName, m.Package)
+					if err != nil {
+						return nil, err
+					}
+					childMessage = msg
+				}
+				if childMessage == nil {
+					continue
+				}
+
+				// Build the child message schema
+				childSchemas, err := m.GetMessageSchemas(childMessage, httpRule, methodExtensions, pathParameters)
 				if err != nil {
 					return nil, err
 				}
-				childMessage = msg
-			}
-			if field.IsMessage() && childMessage == nil {
-				msg, err := findForeignMessage(field.TypeName, pkg)
-				if err != nil {
-					return nil, err
+
+				for name, schema := range childSchemas {
+					schemas[name] = schema
 				}
-				childMessage = msg
-			}
-
-			// Build the child message schema
-			childSchemas, err := getMessageSchemas(childMessage, pkg, httpRule, methodExtensions, pathParameters, settings)
-			if err != nil {
-				return nil, err
-			}
-
-			for name, schema := range childSchemas {
-				schemas[name] = schema
 			}
 
 			// And adds as a property inside the main schema
-			fieldSchema := newRefSchema(field, trimPackageName(field.TypeName), pkg, settings)
+			fieldSchema := newRefSchema(field, trimPackageName(field.TypeName), m.Package, m.Settings)
 			schemaProperties[field.Name] = fieldSchema
 			if fieldSchema.IsRequired() {
 				requiredProperties = append(requiredProperties, field.Name)
@@ -82,11 +94,11 @@ func getMessageSchemas(
 
 		// Ignore fields that are not part of the body
 		location := getFieldLocation(properties, httpRule, methodExtensions, field.Name, pathParameters)
-		if location != "body" && pkg.ModuleName == message.ModuleName {
+		if location != "body" && m.Package.ModuleName == message.ModuleName {
 			continue
 		}
 
-		fieldSchema := newSchemaFromProtobufField(field, pkg, settings)
+		fieldSchema := newSchemaFromProtobufField(field, m.Package, m.Settings)
 		schemaProperties[field.Name] = fieldSchema
 		if fieldSchema.IsRequired() {
 			requiredProperties = append(requiredProperties, field.Name)
@@ -94,7 +106,7 @@ func getMessageSchemas(
 
 		// Check if fieldSchema has an additionalProperty to be added as a schema.
 		if fieldSchema.HasAdditionalProperties() {
-			additionalSchemas, err := fieldSchema.GetAdditionalPropertySchemas(field, pkg, settings)
+			additionalSchemas, err := fieldSchema.GetAdditionalPropertySchemas(field, m)
 			if err != nil {
 				return nil, err
 			}
@@ -113,6 +125,19 @@ func getMessageSchemas(
 	}
 
 	return schemas, nil
+}
+
+func (m *MessageParser) addParsedMessage(name string) {
+	if m.schemas == nil {
+		m.schemas = make(map[string]bool)
+	}
+
+	m.schemas[name] = true
+}
+
+func (m *MessageParser) isMessageAlreadyParsed(name string) bool {
+	_, ok := m.schemas[name]
+	return ok
 }
 
 func shouldHandleChildMessage(field *protobuf.Field) bool {
