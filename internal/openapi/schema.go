@@ -227,32 +227,32 @@ func (s *Schema) HasAdditionalProperties() bool {
 	return s.AdditionalProperties != nil && s.AdditionalProperties != &Schema{}
 }
 
-func (s *Schema) GetAdditionalPropertySchemas(field *protobuf.Field, pkg *protobuf.Protobuf, settings *settings.Settings) (map[string]*Schema, error) {
+func (s *Schema) GetAdditionalPropertySchemas(field *protobuf.Field, parser *MessageParser) (map[string]*Schema, error) {
 	if field.MapValueTypeKind() == protoreflect.MessageKind {
-		return getMessageAdditionalSchema(field, pkg, settings)
+		return getMessageAdditionalSchema(field, parser)
 	}
 
 	if field.MapValueTypeKind() == protoreflect.EnumKind {
 		return map[string]*Schema{
-			trimPackageName(field.MapValueTypeName()): getEnumAdditionalSchema(field, pkg),
+			trimPackageName(field.MapValueTypeName()): getEnumAdditionalSchema(field, parser.Package),
 		}, nil
 	}
 
 	return nil, nil
 }
 
-func getMessageAdditionalSchema(field *protobuf.Field, pkg *protobuf.Protobuf, settings *settings.Settings) (map[string]*Schema, error) {
+func getMessageAdditionalSchema(field *protobuf.Field, parser *MessageParser) (map[string]*Schema, error) {
 	var (
 		packageName = getPackageName(field.MapValueTypeName())
 		messages    []*protobuf.Message
 	)
 
-	if packageName == pkg.PackageName {
-		messages = pkg.Messages
+	if packageName == parser.Package.PackageName {
+		messages = parser.Package.Messages
 	}
-	if packageName != pkg.PackageName {
+	if packageName != parser.Package.PackageName {
 		// find foreign message
-		m, err := loadForeignMessages(field.MapValueTypeName(), pkg)
+		m, err := loadForeignMessages(field.MapValueTypeName(), parser.Package)
 		if err != nil {
 			return nil, err
 		}
@@ -265,7 +265,7 @@ func getMessageAdditionalSchema(field *protobuf.Field, pkg *protobuf.Protobuf, s
 		return msg.Name == trimPackageName(field.MapValueTypeName())
 	})
 	if index != -1 {
-		return getMessageSchemas(messages[index], pkg, nil, nil, nil, settings)
+		return parser.GetMessageSchemas(messages[index], nil, nil, nil)
 	}
 
 	return nil, nil

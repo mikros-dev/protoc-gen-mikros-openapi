@@ -21,6 +21,7 @@ message UserWire {
   string email = 4;
   int32 age = 5;
   UserAdditionalInfoWire additional_info = 6;
+  UserWire child = 7;
 }
 
 message UserAdditionalInfoWire {

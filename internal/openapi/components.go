@@ -50,7 +50,11 @@ func parseComponentsSchemas(pkg *protobuf.Protobuf, settings *settings.Settings)
 
 func getMethodComponentsSchemas(pkg *protobuf.Protobuf, settings *settings.Settings) (map[string]*Schema, error) {
 	var (
-		schemas   = make(map[string]*Schema)
+		schemas = make(map[string]*Schema)
+		parser  = &MessageParser{
+			Package:  pkg,
+			Settings: settings,
+		}
 		converter = converters.NewMessage(converters.MessageOptions{
 			Settings: settings.MikrosSettings,
 		})
@@ -73,7 +77,7 @@ func getMethodComponentsSchemas(pkg *protobuf.Protobuf, settings *settings.Setti
 			return nil, err
 		}
 
-		requests, err := getMessageSchemas(request, pkg, httpRule, methodExtensions, pathParameters, settings)
+		requests, err := parser.GetMessageSchemas(request, httpRule, methodExtensions, pathParameters)
 		if err != nil {
 			return nil, err
 		}
@@ -84,7 +88,7 @@ func getMethodComponentsSchemas(pkg *protobuf.Protobuf, settings *settings.Setti
 			schemas[name] = schema
 		}
 
-		responses, err := getMessageSchemas(response, pkg, httpRule, methodExtensions, pathParameters, settings)
+		responses, err := parser.GetMessageSchemas(response, httpRule, methodExtensions, pathParameters)
 		if err != nil {
 			return nil, err
 		}
