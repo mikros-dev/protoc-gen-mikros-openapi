@@ -159,12 +159,12 @@ func getEnumValues(field *protobuf.Field, pkg *protobuf.Protobuf, settings *sett
 	})
 	if index != -1 {
 		var prefix string
-		if settings.General.RemoveEnumPrefix {
+		if settings.Enum.RemovePrefix {
 			prefix = getEnumPrefix(enums[index])
 		}
 
 		for _, e := range enums[index].Values {
-			if settings.General.RemoveUnspecifiedEnum {
+			if settings.Enum.RemoveUnspecifiedEntry {
 				if strings.HasSuffix(e.ProtoName, "_UNSPECIFIED") {
 					continue
 				}

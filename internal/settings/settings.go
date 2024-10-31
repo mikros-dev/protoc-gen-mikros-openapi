@@ -11,8 +11,10 @@ import (
 )
 
 type Settings struct {
-	General *General `toml:"general" default:"{}"`
-	Mikros  *Mikros  `toml:"mikros" default:"{}"`
+	Debug  bool    `toml:"debug" default:"false"`
+	Enum   *Enum   `toml:"enum" default:"{}"`
+	Mikros *Mikros `toml:"mikros" default:"{}"`
+	Output *Output `toml:"output" default:"{}"`
 
 	MikrosSettings *msettings.Settings
 }
@@ -23,11 +25,13 @@ type Mikros struct {
 	SettingsFilename    string `toml:"settings_filename"`
 }
 
-type General struct {
-	Debug                 bool   `toml:"debug" default:"false"`
-	RemoveEnumPrefix      bool   `toml:"remove_enum_prefix" default:"false"`
-	RemoveUnspecifiedEnum bool   `toml:"remove_unspecified_enum" default:"false"`
-	OutputPath            string `toml:"output_path" default:"openapi"`
+type Enum struct {
+	RemovePrefix           bool `toml:"remove_prefix" default:"false"`
+	RemoveUnspecifiedEntry bool `toml:"remove_unspecified_entry" default:"false"`
+}
+
+type Output struct {
+	Path string `toml:"path" default:"openapi"`
 }
 
 func LoadSettings(filename string) (*Settings, error) {
