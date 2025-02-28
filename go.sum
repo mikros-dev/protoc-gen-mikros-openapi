@@ -48,8 +48,8 @@ github.com/mattn/go-isatty v0.0.12/go.mod h1:cbi8OIDigv2wuxKPP5vlRcQ1OAZbq2CE4Ky
 github.com/mattn/go-isatty v0.0.16/go.mod h1:kYGgaQfpe5nmfYZH+SKPsOc2e4SrIfOl2e/yFXSvRLM=
 github.com/mattn/go-isatty v0.0.17 h1:BTarxUcIeDqL27Mc+vyvdWYSL28zpIhv3RoTdsLMPng=
 github.com/mattn/go-isatty v0.0.17/go.mod h1:kYGgaQfpe5nmfYZH+SKPsOc2e4SrIfOl2e/yFXSvRLM=
-github.com/mikros-dev/protoc-gen-mikros-extensions v0.4.0 h1:OeDpprbekB+1IkwaEFoUL4VAsDELbXvAMXMi0i+cR9g=
-github.com/mikros-dev/protoc-gen-mikros-extensions v0.4.0/go.mod h1:RTSIwrBa8eXMt4tKNGhrynN3BNSjHYNbwuKM4x2iEII=
+github.com/mikros-dev/protoc-gen-mikros-extensions v0.10.0 h1:wzKvV9rWpnu/YMKmjz5MGRb10EIM9aAKad3GVb3v204=
+github.com/mikros-dev/protoc-gen-mikros-extensions v0.10.0/go.mod h1:RTSIwrBa8eXMt4tKNGhrynN3BNSjHYNbwuKM4x2iEII=
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 h1:Jamvg5psRIccs7FGNTlIRMkT8wgtp5eCXdBlqhYGL6U=
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsTg=
