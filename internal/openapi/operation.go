@@ -7,8 +7,8 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/converters"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 
-	"github.com/mikros-dev/protoc-gen-openapi/internal/settings"
-	openapipb "github.com/mikros-dev/protoc-gen-openapi/openapi"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
+	openapipb "github.com/mikros-dev/protoc-gen-mikros-openapi/openapi"
 )
 
 const (
