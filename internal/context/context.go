@@ -6,9 +6,9 @@ import (
 	"github.com/goccy/go-yaml"
 	"google.golang.org/protobuf/compiler/protogen"
 
-	"github.com/mikros-dev/protoc-gen-openapi/internal/args"
-	"github.com/mikros-dev/protoc-gen-openapi/internal/openapi"
-	"github.com/mikros-dev/protoc-gen-openapi/internal/settings"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/args"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/openapi"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
 )
 
 type Context struct {

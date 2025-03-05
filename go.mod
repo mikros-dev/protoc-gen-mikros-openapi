@@ -1,4 +1,4 @@
-module github.com/mikros-dev/protoc-gen-openapi
+module github.com/mikros-dev/protoc-gen-mikros-openapi
 
 go 1.23.0
 
@@ -9,7 +9,7 @@ require (
 	github.com/creasty/defaults v1.8.0
 	github.com/goccy/go-yaml v1.12.0
 	github.com/juliangruber/go-intersect v1.1.0
-	github.com/mikros-dev/protoc-gen-mikros-extensions v0.10.0
+	github.com/mikros-dev/protoc-gen-mikros-extensions v0.11.5
 	google.golang.org/genproto/googleapis/api v0.0.0-20240617180043-68d350f18fd4
 	google.golang.org/protobuf v1.35.1
 )

@@ -10,8 +10,8 @@ import (
 	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/types/pluginpb"
 
-	"github.com/mikros-dev/protoc-gen-openapi/internal/args"
-	mcontext "github.com/mikros-dev/protoc-gen-openapi/internal/context"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/args"
+	mcontext "github.com/mikros-dev/protoc-gen-mikros-openapi/internal/context"
 )
 
 func Handle(

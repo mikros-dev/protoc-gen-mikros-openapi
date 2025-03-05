@@ -5,7 +5,7 @@ import (
 	"slices"
 
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
-	openapipb "github.com/mikros-dev/protoc-gen-openapi/openapi"
+	openapipb "github.com/mikros-dev/protoc-gen-mikros-openapi/openapi"
 )
 
 type RequestBody struct {

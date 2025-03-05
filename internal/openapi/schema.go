@@ -9,8 +9,8 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
-	"github.com/mikros-dev/protoc-gen-openapi/internal/settings"
-	openapipb "github.com/mikros-dev/protoc-gen-openapi/openapi"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
+	openapipb "github.com/mikros-dev/protoc-gen-mikros-openapi/openapi"
 )
 
 type Schema struct {

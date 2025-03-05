@@ -1,4 +1,4 @@
-package openapi
+package mikros_openapi
 
 import (
 	"google.golang.org/protobuf/proto"
