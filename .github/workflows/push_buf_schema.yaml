@@ -16,8 +16,8 @@ jobs:
 
       - name: Copy proto files to temporary directory
         run: |
-          cp openapi/*.proto tmp
-          cp openapi/README.md tmp
+          cp proto/*.proto tmp
+          cp proto/README.md tmp
 
       - name: Create buf.yaml
         run: |
