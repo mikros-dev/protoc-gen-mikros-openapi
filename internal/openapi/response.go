@@ -7,7 +7,7 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
-	openapipb "github.com/mikros-dev/protoc-gen-mikros-openapi/openapi"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 )
 
 type Response struct {
@@ -52,12 +52,12 @@ func parseOperationResponses(method *protobuf.Method, settings *settings.Setting
 	return responses
 }
 
-func getMethodResponseCodes(method *protobuf.Method) []*openapipb.Response {
+func getMethodResponseCodes(method *protobuf.Method) []*mikros_openapi.Response {
 	var (
-		codes []*openapipb.Response
+		codes []*mikros_openapi.Response
 	)
 
-	if extensions := openapipb.LoadMethodExtensions(method.Proto); extensions != nil {
+	if extensions := mikros_openapi.LoadMethodExtensions(method.Proto); extensions != nil {
 		for _, c := range extensions.GetResponse() {
 			codes = append(codes, c)
 		}

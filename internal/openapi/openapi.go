@@ -5,7 +5,7 @@ import (
 	"google.golang.org/protobuf/compiler/protogen"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
-	openapipb "github.com/mikros-dev/protoc-gen-mikros-openapi/openapi"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 )
 
 type Openapi struct {
@@ -71,7 +71,7 @@ func parseInfo(pkg *protobuf.Protobuf) *Info {
 		description string
 	)
 
-	if metadata := openapipb.LoadMetadata(pkg.PackageFiles[pkg.ModuleName+"_api"].Proto); metadata != nil && metadata.GetInfo() != nil {
+	if metadata := mikros_openapi.LoadMetadata(pkg.PackageFiles[pkg.ModuleName+"_api"].Proto); metadata != nil && metadata.GetInfo() != nil {
 		title = metadata.GetInfo().GetTitle()
 		description = metadata.GetInfo().GetDescription()
 		version = metadata.GetInfo().GetVersion()
@@ -86,7 +86,7 @@ func parseInfo(pkg *protobuf.Protobuf) *Info {
 
 func parseServers(pkg *protobuf.Protobuf) []*Server {
 	var (
-		metadata = openapipb.LoadMetadata(pkg.PackageFiles[pkg.ModuleName+"_api"].Proto)
+		metadata = mikros_openapi.LoadMetadata(pkg.PackageFiles[pkg.ModuleName+"_api"].Proto)
 		servers  []*Server
 	)
 

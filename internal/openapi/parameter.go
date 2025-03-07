@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"slices"
 
-	mextensionspb "github.com/mikros-dev/protoc-gen-mikros-extensions/mikros/extensions"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/converters"
+	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mikros_extensions"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 	"google.golang.org/genproto/googleapis/api/annotations"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
-	openapipb "github.com/mikros-dev/protoc-gen-mikros-openapi/openapi"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 )
 
 type Parameter struct {
@@ -66,14 +66,14 @@ func findMethodRequestMessage(method *protobuf.Method, pkg *protobuf.Protobuf) (
 }
 
 func getEndpointInformation(httpRule *annotations.HttpRule) ([]string, string) {
-	endpoint, method := mextensionspb.GetHttpEndpoint(httpRule)
-	return mextensionspb.RetrieveParameters(endpoint), method
+	endpoint, method := mikros_extensions.GetHttpEndpoint(httpRule)
+	return mikros_extensions.RetrieveParameters(endpoint), method
 }
 
 func parseOperationParameter(method *protobuf.Method, field *protobuf.Field, message *protobuf.Message, pathParameters []string, httpRule *annotations.HttpRule, settings *settings.Settings) (*Parameter, error) {
 	var (
-		properties       = openapipb.LoadFieldExtensions(field.Proto)
-		methodExtensions = mextensionspb.LoadMethodExtensions(method.Proto)
+		properties       = mikros_openapi.LoadFieldExtensions(field.Proto)
+		methodExtensions = mikros_extensions.LoadMethodExtensions(method.Proto)
 		location         = getFieldLocation(properties, httpRule, methodExtensions, field.Name, pathParameters)
 		name             = field.Name
 		description      string
@@ -105,7 +105,7 @@ func parseOperationParameter(method *protobuf.Method, field *protobuf.Field, mes
 	}, nil
 }
 
-func getParameterMandatory(properties *openapipb.Property, location string) bool {
+func getParameterMandatory(properties *mikros_openapi.Property, location string) bool {
 	if properties != nil {
 		if properties.GetRequired() {
 			return true
@@ -115,7 +115,7 @@ func getParameterMandatory(properties *openapipb.Property, location string) bool
 	return location == "path"
 }
 
-func getParameterSchema(properties *openapipb.Property, field *protobuf.Field) *Schema {
+func getParameterSchema(properties *mikros_openapi.Property, field *protobuf.Field) *Schema {
 	var (
 		example string
 		format  string

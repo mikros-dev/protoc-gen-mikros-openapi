@@ -5,7 +5,7 @@ import (
 	"slices"
 
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
-	openapipb "github.com/mikros-dev/protoc-gen-mikros-openapi/openapi"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 )
 
 type RequestBody struct {
@@ -44,7 +44,7 @@ func parseRequestBody(method *protobuf.Method, httpMethod string, pkg *protobuf.
 	}
 }
 
-func findRequestBodyMessageExtensions(pkg *protobuf.Protobuf, name string) *openapipb.OpenapiMessage {
+func findRequestBodyMessageExtensions(pkg *protobuf.Protobuf, name string) *mikros_openapi.OpenapiMessage {
 	index := slices.IndexFunc(pkg.Messages, func(msg *protobuf.Message) bool {
 		return msg.Name == name
 	})
@@ -52,5 +52,5 @@ func findRequestBodyMessageExtensions(pkg *protobuf.Protobuf, name string) *open
 		return nil
 	}
 
-	return openapipb.LoadMessageExtensions(pkg.Messages[index].Proto)
+	return mikros_openapi.LoadMessageExtensions(pkg.Messages[index].Proto)
 }

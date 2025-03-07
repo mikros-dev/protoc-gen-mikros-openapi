@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"slices"
 
-	mextensionspb "github.com/mikros-dev/protoc-gen-mikros-extensions/mikros/extensions"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/converters"
+	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mikros_extensions"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
@@ -62,8 +62,8 @@ func getMethodComponentsSchemas(pkg *protobuf.Protobuf, settings *settings.Setti
 
 	for _, method := range pkg.Service.Methods {
 		var (
-			httpRule          = mextensionspb.LoadGoogleAnnotations(method.Proto)
-			methodExtensions  = mextensionspb.LoadMethodExtensions(method.Proto)
+			httpRule          = mikros_extensions.LoadGoogleAnnotations(method.Proto)
+			methodExtensions  = mikros_extensions.LoadMethodExtensions(method.Proto)
 			pathParameters, _ = getEndpointInformation(httpRule)
 		)
 
