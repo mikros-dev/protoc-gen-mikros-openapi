@@ -10,7 +10,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
-	openapipb "github.com/mikros-dev/protoc-gen-mikros-openapi/openapi"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 )
 
 type Schema struct {
@@ -53,7 +53,7 @@ func newRefSchema(field *protobuf.Field, refDestination string, pkg *protobuf.Pr
 
 func newSchemaFromProtobufField(field *protobuf.Field, pkg *protobuf.Protobuf, settings *settings.Settings) *Schema {
 	var (
-		properties = openapipb.LoadFieldExtensions(field.Proto)
+		properties = mikros_openapi.LoadFieldExtensions(field.Proto)
 		schema     = &Schema{
 			Type:  schemaTypeFromProtobufField(field).String(),
 			field: field, // Saves the field to be used later.

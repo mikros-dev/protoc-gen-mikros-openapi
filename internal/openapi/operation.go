@@ -3,12 +3,12 @@ package openapi
 import (
 	"strings"
 
-	mextensionspb "github.com/mikros-dev/protoc-gen-mikros-extensions/mikros/extensions"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/converters"
+	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mikros_extensions"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
-	openapipb "github.com/mikros-dev/protoc-gen-mikros-openapi/openapi"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 )
 
 const (
@@ -61,13 +61,13 @@ func parsePathItems(pkg *protobuf.Protobuf, settings *settings.Settings) (map[st
 }
 
 func parseOperation(method *protobuf.Method, pkg *protobuf.Protobuf, settings *settings.Settings, converter *converters.Message) (*Operation, error) {
-	googleAnnotations := mextensionspb.LoadGoogleAnnotations(method.Proto)
+	googleAnnotations := mikros_extensions.LoadGoogleAnnotations(method.Proto)
 	if googleAnnotations == nil {
 		return nil, nil
 	}
 
-	endpoint, m := mextensionspb.GetHttpEndpoint(googleAnnotations)
-	extensions := openapipb.LoadMethodExtensions(method.Proto)
+	endpoint, m := mikros_extensions.GetHttpEndpoint(googleAnnotations)
+	extensions := mikros_openapi.LoadMethodExtensions(method.Proto)
 	if extensions == nil {
 		return nil, nil
 	}

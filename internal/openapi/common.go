@@ -5,20 +5,20 @@ import (
 	"slices"
 	"strings"
 
-	mextensionspb "github.com/mikros-dev/protoc-gen-mikros-extensions/mikros/extensions"
+	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mikros_extensions"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 	"google.golang.org/genproto/googleapis/api/annotations"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
-	openapipb "github.com/mikros-dev/protoc-gen-mikros-openapi/openapi"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 )
 
 type Media struct {
 	Schema *Schema `json:"schema,omitempty"`
 }
 
-func isSuccessCode(code *openapipb.Response) bool {
-	return code.GetCode() == openapipb.ResponseCode_RESPONSE_CODE_OK || code.GetCode() == openapipb.ResponseCode_RESPONSE_CODE_CREATED
+func isSuccessCode(code *mikros_openapi.Response) bool {
+	return code.GetCode() == mikros_openapi.ResponseCode_RESPONSE_CODE_OK || code.GetCode() == mikros_openapi.ResponseCode_RESPONSE_CODE_CREATED
 }
 
 type MessageParser struct {
@@ -31,7 +31,7 @@ type MessageParser struct {
 func (m *MessageParser) GetMessageSchemas(
 	message *protobuf.Message,
 	httpRule *annotations.HttpRule,
-	methodExtensions *mextensionspb.MikrosMethodExtensions,
+	methodExtensions *mikros_extensions.MikrosMethodExtensions,
 	pathParameters []string,
 ) (map[string]*Schema, error) {
 	var (
@@ -89,7 +89,7 @@ func (m *MessageParser) GetMessageSchemas(
 		}
 
 		var (
-			properties = openapipb.LoadFieldExtensions(field.Proto)
+			properties = mikros_openapi.LoadFieldExtensions(field.Proto)
 		)
 
 		// Ignore fields that are not part of the body
@@ -178,14 +178,14 @@ func getPackageName(msgType string) string {
 }
 
 func getFieldLocation(
-	properties *openapipb.Property,
+	properties *mikros_openapi.Property,
 	httpRule *annotations.HttpRule,
-	methodExtensions *mextensionspb.MikrosMethodExtensions,
+	methodExtensions *mikros_extensions.MikrosMethodExtensions,
 	fieldName string,
 	pathParameters []string,
 ) string {
 	// Get the location from our own proto annotation.
-	if properties != nil && properties.GetLocation() != openapipb.PropertyLocation_PROPERTY_LOCATION_UNSPECIFIED {
+	if properties != nil && properties.GetLocation() != mikros_openapi.PropertyLocation_PROPERTY_LOCATION_UNSPECIFIED {
 		return strings.ToLower(strings.TrimPrefix(properties.GetLocation().String(), "PROPERTY_LOCATION_"))
 	}
 

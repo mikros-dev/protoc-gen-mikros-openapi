@@ -1,7 +1,8 @@
 syntax = "proto2";
 
 package openapi;
-option go_package = "github.com/mikros-dev/protoc-gen-mikros-openapi/openapi;mikros_openapi";
+
+option go_package = "github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi;mikros_openapi";
 
 import "google/protobuf/descriptor.proto";
 
