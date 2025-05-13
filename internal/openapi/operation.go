@@ -1,8 +1,10 @@
 package openapi
 
 import (
+	"fmt"
 	"strings"
 
+	"github.com/iancoleman/strcase"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/converters"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mikros_extensions"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
@@ -67,6 +69,10 @@ func parseOperation(method *protobuf.Method, pkg *protobuf.Protobuf, settings *s
 	}
 
 	endpoint, m := mikros_extensions.GetHttpEndpoint(googleAnnotations)
+	if settings.AddServiceNameInEndpoints {
+		endpoint = fmt.Sprintf("/%v%v", strcase.ToKebab(pkg.ModuleName), endpoint)
+	}
+
 	extensions := mikros_openapi.LoadMethodExtensions(method.Proto)
 	if extensions == nil {
 		return nil, nil
