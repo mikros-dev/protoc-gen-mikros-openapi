@@ -11,10 +11,11 @@ import (
 )
 
 type Settings struct {
-	Debug  bool    `toml:"debug" default:"false"`
-	Enum   *Enum   `toml:"enum" default:"{}"`
-	Mikros *Mikros `toml:"mikros" default:"{}"`
-	Output *Output `toml:"output" default:"{}"`
+	Debug                     bool    `toml:"debug" default:"false"`
+	AddServiceNameInEndpoints bool    `toml:"add_service_name_in_endpoints" default:"false"`
+	Enum                      *Enum   `toml:"enum" default:"{}"`
+	Mikros                    *Mikros `toml:"mikros" default:"{}"`
+	Output                    *Output `toml:"output" default:"{}"`
 
 	MikrosSettings *msettings.Settings
 }

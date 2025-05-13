@@ -1,5 +1,6 @@
 
 debug = true
+add_service_name_in_endpoints = true
 
 [enum]
 remove_prefix = true
