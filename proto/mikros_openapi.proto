@@ -196,6 +196,7 @@ message Property {
   optional PropertyFormat format = 3;
   optional bool required = 4;
   optional PropertyLocation location = 5;
+  optional bool hide_from_schema = 6;
 }
 
 // Supported formats of a property.

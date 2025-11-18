@@ -15,6 +15,7 @@ A field has the following options available:
 | [format](#format)     | enum   | optional | The field type.                                                            |
 | required              | bool   | optional | Sets if the field is required in the message or not.                       |
 | [location](#location) | enum   | optional | The field location in the request.                                         |
+| hide_from_schema      | bool   | optional | Hides the field from the generated schema.                                 |
 
 ### format
 

@@ -98,6 +98,11 @@ func (m *MessageParser) GetMessageSchemas(
 			continue
 		}
 
+		// Also ignore fields that the user requested to be hidden
+		if properties != nil && properties.GetHideFromSchema() {
+			continue
+		}
+
 		fieldSchema := newSchemaFromProtobufField(field, m.Package, m.Settings)
 		schemaProperties[field.Name] = fieldSchema
 		if fieldSchema.IsRequired() {
