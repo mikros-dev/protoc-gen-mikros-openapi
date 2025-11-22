@@ -111,7 +111,7 @@ func (m *MessageParser) GetMessageSchemas(
 
 		// Check if fieldSchema has an additionalProperty to be added as a schema.
 		if fieldSchema.HasAdditionalProperties() {
-			additionalSchemas, err := fieldSchema.GetAdditionalPropertySchemas(field, m)
+			additionalSchemas, err := fieldSchema.GetAdditionalPropertySchemas(field, m, httpRule, methodExtensions, pathParameters)
 			if err != nil {
 				return nil, err
 			}
@@ -209,6 +209,7 @@ func getFieldLocation(
 		}
 	}
 
+	// Field has no annotation
 	return "query"
 }
 
