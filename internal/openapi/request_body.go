@@ -15,7 +15,7 @@ type RequestBody struct {
 }
 
 func parseRequestBody(method *protobuf.Method, httpMethod string, pkg *protobuf.Protobuf) *RequestBody {
-	if httpMethod != http.MethodPost && httpMethod != http.MethodPut {
+	if httpMethod != http.MethodPost && httpMethod != http.MethodPut && httpMethod != http.MethodPatch {
 		return nil
 	}
 

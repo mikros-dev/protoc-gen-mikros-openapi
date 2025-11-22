@@ -6,7 +6,9 @@ import (
 	"strings"
 
 	"github.com/juliangruber/go-intersect"
+	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mikros_extensions"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
+	"google.golang.org/genproto/googleapis/api/annotations"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
@@ -227,9 +229,15 @@ func (s *Schema) HasAdditionalProperties() bool {
 	return s.AdditionalProperties != nil && s.AdditionalProperties != &Schema{}
 }
 
-func (s *Schema) GetAdditionalPropertySchemas(field *protobuf.Field, parser *MessageParser) (map[string]*Schema, error) {
+func (s *Schema) GetAdditionalPropertySchemas(
+	field *protobuf.Field,
+	parser *MessageParser,
+	httpRule *annotations.HttpRule,
+	methodExtensions *mikros_extensions.MikrosMethodExtensions,
+	pathParameters []string,
+) (map[string]*Schema, error) {
 	if field.MapValueTypeKind() == protoreflect.MessageKind {
-		return getMessageAdditionalSchema(field, parser)
+		return getMessageAdditionalSchema(field, parser, httpRule, methodExtensions, pathParameters)
 	}
 
 	if field.MapValueTypeKind() == protoreflect.EnumKind {
@@ -241,7 +249,13 @@ func (s *Schema) GetAdditionalPropertySchemas(field *protobuf.Field, parser *Mes
 	return nil, nil
 }
 
-func getMessageAdditionalSchema(field *protobuf.Field, parser *MessageParser) (map[string]*Schema, error) {
+func getMessageAdditionalSchema(
+	field *protobuf.Field,
+	parser *MessageParser,
+	httpRule *annotations.HttpRule,
+	methodExtensions *mikros_extensions.MikrosMethodExtensions,
+	pathParameters []string,
+) (map[string]*Schema, error) {
 	var (
 		packageName = getPackageName(field.MapValueTypeName())
 		messages    []*protobuf.Message
@@ -265,7 +279,7 @@ func getMessageAdditionalSchema(field *protobuf.Field, parser *MessageParser) (m
 		return msg.Name == trimPackageName(field.MapValueTypeName())
 	})
 	if index != -1 {
-		return parser.GetMessageSchemas(messages[index], nil, nil, nil)
+		return parser.GetMessageSchemas(messages[index], httpRule, methodExtensions, pathParameters)
 	}
 
 	return nil, nil
