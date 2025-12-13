@@ -6,7 +6,7 @@ option go_package = "examples/gen/go/services/user_bff;user_bff";
 
 import "google/api/annotations.proto";
 import "mikros_extensions.proto";
-import "openapi/mikros_openapi.proto";
+import "mikros_openapi.proto";
 import "services/user/user.proto";
 import "services/common/common.proto";
 import "services/misc/misc.proto";
@@ -168,6 +168,7 @@ message CreateUserRequest {
     operation: {
       request_body: {
         description: "The information to create a new user."
+        type: REQUEST_BODY_TYPE_MULTIPART_FORM_DATA
       }
     }
   };
@@ -184,6 +185,9 @@ message CreateUserRequest {
   LocalStatus local_status = 6;
   repeated string teste1 = 7;
   repeated LocalStatus teste2 = 8;
+  string file = 9 [(openapi.property) = {
+    format: PROPERTY_FORMAT_BINARY
+  }];
 }
 
 enum LocalStatus {

@@ -183,6 +183,13 @@ message Operation {
 
 message RequestBody {
   required string description = 1;
+  optional RequestBodyType type = 2;
+}
+
+enum RequestBodyType {
+  REQUEST_BODY_TYPE_UNSPECIFIED = 0;
+  REQUEST_BODY_TYPE_APPLICATION_JSON = 1;
+  REQUEST_BODY_TYPE_MULTIPART_FORM_DATA = 2;
 }
 
 // Annotations to be used at a message member (field) declaration.

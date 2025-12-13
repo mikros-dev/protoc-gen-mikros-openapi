@@ -20,6 +20,14 @@ A message has the following options available:
 
 #### request_body
 
-| Name        | Type   | Modifier | Description                              |
-|-------------|--------|----------|------------------------------------------|
-| description | string | required | A brief description of the request body. |
+| Name          | Type   | Modifier | Description                              |
+|---------------|--------|----------|------------------------------------------|
+| description   | string | required | A brief description of the request body. |
+| [type](#type) | enum   | optional | The type of the request body.            |
+
+##### type
+
+| Value                                 | Description                              |
+|---------------------------------------|------------------------------------------|
+| REQUEST_BODY_TYPE_APPLICATION_JSON    | The request body is application/json.    |
+| REQUEST_BODY_TYPE_MULTIPART_FORM_DATA | The request body is multipart/form-data. |

@@ -123,10 +123,10 @@ func (m *MessageParser) GetMessageSchemas(
 	}
 
 	schemas[message.Name] = &Schema{
-		Type:       SchemaType_Object.String(),
-		Properties: schemaProperties,
-		Required:   requiredProperties,
-		Message:    message,
+		Type:               SchemaType_Object.String(),
+		Properties:         schemaProperties,
+		RequiredProperties: requiredProperties,
+		Message:            message,
 	}
 
 	return schemas, nil
