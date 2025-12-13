@@ -42,6 +42,7 @@ service UserBffService {
     };
 
     option (openapi.operation) = {
+      disable_inbound_processing: true
       summary: "Create a new user"
       description: "Create a new user according request options."
       tags: "user-bff"
@@ -187,6 +188,7 @@ message CreateUserRequest {
   repeated LocalStatus teste2 = 8;
   string file = 9 [(openapi.property) = {
     format: PROPERTY_FORMAT_BINARY
+    schema_name: "entity.file"
   }];
 }
 
@@ -196,6 +198,7 @@ enum LocalStatus {
   LOCAL_STATUS_ERROR = 2;
   LOCAL_STATUS_RETRY = 3;
 }
+
 message CreateUserResponse {
   user.UserWire user = 1;
 }

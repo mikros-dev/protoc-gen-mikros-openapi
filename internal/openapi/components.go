@@ -9,6 +9,7 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 )
 
 type Components struct {
@@ -64,6 +65,7 @@ func getMethodComponentsSchemas(pkg *protobuf.Protobuf, settings *settings.Setti
 		var (
 			httpRule          = mikros_extensions.LoadGoogleAnnotations(method.Proto)
 			methodExtensions  = mikros_extensions.LoadMethodExtensions(method.Proto)
+			extensions        = mikros_openapi.LoadMethodExtensions(method.Proto)
 			pathParameters, _ = getEndpointInformation(httpRule)
 		)
 
@@ -81,7 +83,7 @@ func getMethodComponentsSchemas(pkg *protobuf.Protobuf, settings *settings.Setti
 		if err != nil {
 			return nil, err
 		}
-		if settings.Mikros.UseInboundMessages {
+		if settings.Mikros.UseInboundMessages && !extensions.GetDisableInboundProcessing() {
 			requests = processInboundMessages(requests, settings)
 		}
 		for name, schema := range requests {

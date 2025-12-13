@@ -8,14 +8,15 @@ A field has the following options available:
 
 ## property
 
-| Name                  | Type   | Modifier | Description                                                                |
-|-----------------------|--------|----------|----------------------------------------------------------------------------|
-| description           | string | optional | A brief description of the parameter.                                      |
-| example               | string | optional | A free-form property to include an example of an instance for this schema. |
-| [format](#format)     | enum   | optional | The field type.                                                            |
-| required              | bool   | optional | Sets if the field is required in the message or not.                       |
-| [location](#location) | enum   | optional | The field location in the request.                                         |
-| hide_from_schema      | bool   | optional | Hides the field from the generated schema.                                 |
+| Name                  | Type   | Modifier | Description                                                                                                                                                                        |
+|-----------------------|--------|----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| description           | string | optional | A brief description of the parameter.                                                                                                                                              |
+| example               | string | optional | A free-form property to include an example of an instance for this schema.                                                                                                         |
+| [format](#format)     | enum   | optional | The field type.                                                                                                                                                                    |
+| required              | bool   | optional | Sets if the field is required in the message or not.                                                                                                                               |
+| [location](#location) | enum   | optional | The field location in the request.                                                                                                                                                 |
+| hide_from_schema      | bool   | optional | Hides the field from the generated schema.                                                                                                                                         |
+| schema_name           | string | optional | A custom name to be used in the schema output. It will replace the field name. For this to work, the method option [disable_inbound_processing](method.md#operation) must be true. |
 
 ### format
 
