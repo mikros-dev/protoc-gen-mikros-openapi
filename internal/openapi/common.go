@@ -90,6 +90,7 @@ func (m *MessageParser) GetMessageSchemas(
 
 		var (
 			properties = mikros_openapi.LoadFieldExtensions(field.Proto)
+			fieldName  = field.Name
 		)
 
 		// Ignore fields that are not part of the body
@@ -98,15 +99,22 @@ func (m *MessageParser) GetMessageSchemas(
 			continue
 		}
 
-		// Also ignore fields that the user requested to be hidden
-		if properties != nil && properties.GetHideFromSchema() {
-			continue
+		if properties != nil {
+			// Also ignore fields that the user requested to be hidden
+			if properties.GetHideFromSchema() {
+				continue
+			}
+
+			// Use the field name from the annotation if provided
+			if n := properties.GetSchemaName(); n != "" {
+				fieldName = n
+			}
 		}
 
 		fieldSchema := newSchemaFromProtobufField(field, m.Package, m.Settings)
-		schemaProperties[field.Name] = fieldSchema
+		schemaProperties[fieldName] = fieldSchema
 		if fieldSchema.IsRequired() {
-			requiredProperties = append(requiredProperties, field.Name)
+			requiredProperties = append(requiredProperties, fieldName)
 		}
 
 		// Check if fieldSchema has an additionalProperty to be added as a schema.
