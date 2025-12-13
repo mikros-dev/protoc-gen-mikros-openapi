@@ -66,9 +66,11 @@ func newSchemaFromProtobufField(field *protobuf.Field, pkg *protobuf.Protobuf, s
 		schema.required = properties.GetRequired()
 		schema.Example = properties.GetExample()
 		schema.Description = properties.GetDescription()
+		schema.Format = protoFormatToSchemaFormat(properties.GetFormat())
 	}
 
 	if field.IsTimestamp() {
+		// Timestamps are always formatted as date-time.
 		schema.Format = "date-time"
 	}
 
@@ -109,6 +111,33 @@ func newSchemaFromProtobufField(field *protobuf.Field, pkg *protobuf.Protobuf, s
 	}
 
 	return schema
+}
+
+func protoFormatToSchemaFormat(format mikros_openapi.PropertyFormat) string {
+	switch format {
+	case mikros_openapi.PropertyFormat_PROPERTY_FORMAT_DATE_TIME:
+		return "date-time"
+	case mikros_openapi.PropertyFormat_PROPERTY_FORMAT_BINARY:
+		return "binary"
+	case mikros_openapi.PropertyFormat_PROPERTY_FORMAT_DOUBLE:
+		return "double"
+	case mikros_openapi.PropertyFormat_PROPERTY_FORMAT_FLOAT:
+		return "float"
+	case mikros_openapi.PropertyFormat_PROPERTY_FORMAT_INT32:
+		return "int32"
+	case mikros_openapi.PropertyFormat_PROPERTY_FORMAT_INT64:
+		return "int64"
+	case mikros_openapi.PropertyFormat_PROPERTY_FORMAT_BYTE:
+		return "byte"
+	case mikros_openapi.PropertyFormat_PROPERTY_FORMAT_DATE:
+		return "date"
+	case mikros_openapi.PropertyFormat_PROPERTY_FORMAT_PASSWORD:
+		return "password"
+	case mikros_openapi.PropertyFormat_PROPERTY_FORMAT_STRING:
+		return "string"
+	default:
+		return ""
+	}
 }
 
 func getMapSchema(field *protobuf.Field) *Schema {

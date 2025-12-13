@@ -22,6 +22,7 @@ func parseRequestBody(method *protobuf.Method, httpMethod string, pkg *protobuf.
 	var (
 		required    bool
 		description string
+		contentType = "application/json"
 	)
 
 	if httpMethod == http.MethodPost {
@@ -29,13 +30,20 @@ func parseRequestBody(method *protobuf.Method, httpMethod string, pkg *protobuf.
 	}
 	if extensions := findRequestBodyMessageExtensions(pkg, method.RequestType.Name); extensions != nil {
 		description = extensions.GetOperation().GetRequestBody().GetDescription()
+
+		switch extensions.GetOperation().GetRequestBody().GetType() {
+		case mikros_openapi.RequestBodyType_REQUEST_BODY_TYPE_MULTIPART_FORM_DATA:
+			contentType = "multipart/form-data"
+		default:
+			contentType = "application/json"
+		}
 	}
 
 	return &RequestBody{
 		Required:    required,
 		Description: description,
 		Content: map[string]*Media{
-			"application/json": {
+			contentType: {
 				Schema: &Schema{
 					Ref: refComponentsSchemas + method.RequestType.Name,
 				},
