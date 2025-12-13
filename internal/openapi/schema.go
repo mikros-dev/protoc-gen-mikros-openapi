@@ -25,7 +25,7 @@ type Schema struct {
 	Example              string             `yaml:"example,omitempty"`
 	Items                *Schema            `yaml:"items,omitempty"`
 	Enum                 []string           `yaml:"enum,omitempty"`
-	Required             []string           `yaml:"required,omitempty"`
+	RequiredProperties   []string           `yaml:"required,omitempty"`
 	Properties           map[string]*Schema `yaml:"properties,omitempty"`
 	AdditionalProperties *Schema            `yaml:"additionalProperties,omitempty"`
 	AnyOf                []*Schema          `yaml:"anyOf,omitempty"`
