@@ -185,11 +185,16 @@ message CreateUserRequest {
   common.Status status = 5;
   LocalStatus local_status = 6;
   repeated string teste1 = 7;
-  repeated LocalStatus teste2 = 8;
+  repeated LocalStatus teste2 = 8;// [(openapi.property) = {hide_from_schema: true}];
   string file = 9 [(openapi.property) = {
     format: PROPERTY_FORMAT_BINARY
     schema_name: "entity.file"
   }];
+  Example example = 10 [(openapi.property) = {hide_from_schema: false}];
+}
+
+message Example {
+  string id = 1;
 }
 
 enum LocalStatus {

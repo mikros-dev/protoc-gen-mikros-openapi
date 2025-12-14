@@ -43,6 +43,17 @@ func (m *MessageParser) GetMessageSchemas(
 	m.addParsedMessage(message.Name)
 
 	for _, field := range message.Fields {
+		var (
+			properties = mikros_openapi.LoadFieldExtensions(field.Proto)
+		)
+
+		if properties != nil {
+			// Ignore fields that the user requested to be hidden
+			if properties.GetHideFromSchema() {
+				continue
+			}
+		}
+
 		if shouldHandleChildMessage(field) {
 			if !m.isMessageAlreadyParsed(trimPackageName(field.TypeName)) {
 				var (
@@ -89,8 +100,7 @@ func (m *MessageParser) GetMessageSchemas(
 		}
 
 		var (
-			properties = mikros_openapi.LoadFieldExtensions(field.Proto)
-			fieldName  = field.Name
+			fieldName = field.Name
 		)
 
 		// Ignore fields that are not part of the body
@@ -100,11 +110,6 @@ func (m *MessageParser) GetMessageSchemas(
 		}
 
 		if properties != nil {
-			// Also ignore fields that the user requested to be hidden
-			if properties.GetHideFromSchema() {
-				continue
-			}
-
 			// Use the field name from the annotation if provided
 			if n := properties.GetSchemaName(); n != "" {
 				fieldName = n
