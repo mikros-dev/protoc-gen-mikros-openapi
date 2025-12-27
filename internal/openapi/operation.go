@@ -17,10 +17,11 @@ const (
 	refComponentsSchemas = "#/components/schemas/"
 )
 
+// Operation describes a single API operation on a path.
 type Operation struct {
 	Summary         string                `yaml:"summary"`
 	Description     string                `yaml:"description"`
-	Id              string                `yaml:"operationId"`
+	ID              string                `yaml:"operationId"`
 	Tags            []string              `yaml:"tags,omitempty"`
 	Parameters      []*Parameter          `yaml:"parameters,omitempty"`
 	Responses       map[string]*Response  `yaml:"responses,omitempty"`
@@ -62,7 +63,12 @@ func parsePathItems(pkg *protobuf.Protobuf, settings *settings.Settings) (map[st
 	return pathItems, nil
 }
 
-func parseOperation(method *protobuf.Method, pkg *protobuf.Protobuf, settings *settings.Settings, converter *converters.Message) (*Operation, error) {
+func parseOperation(
+	method *protobuf.Method,
+	pkg *protobuf.Protobuf,
+	settings *settings.Settings,
+	converter *converters.Message,
+) (*Operation, error) {
 	googleAnnotations := mikros_extensions.LoadGoogleAnnotations(method.Proto)
 	if googleAnnotations == nil {
 		return nil, nil
@@ -88,7 +94,7 @@ func parseOperation(method *protobuf.Method, pkg *protobuf.Protobuf, settings *s
 		endpoint:        endpoint,
 		Summary:         extensions.GetSummary(),
 		Description:     extensions.GetDescription(),
-		Id:              method.Name,
+		ID:              method.Name,
 		Tags:            extensions.GetTags(),
 		Parameters:      parameters,
 		Responses:       parseOperationResponses(method, settings, converter),

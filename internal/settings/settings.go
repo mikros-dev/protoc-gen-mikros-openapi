@@ -10,6 +10,8 @@ import (
 	msettings "github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/settings"
 )
 
+// Settings contains all settings for the plugin read from the plugin TOML
+// file.
 type Settings struct {
 	Debug                     bool    `toml:"debug" default:"false"`
 	AddServiceNameInEndpoints bool    `toml:"add_service_name_in_endpoints" default:"false"`
@@ -20,21 +22,27 @@ type Settings struct {
 	MikrosSettings *msettings.Settings
 }
 
+// Mikros contains all settings related to the protoc-gen-mikros-extensions
+// plugin.
 type Mikros struct {
 	UseOutboundMessages bool   `toml:"use_outbound_messages" default:"false"`
 	UseInboundMessages  bool   `toml:"use_inbound_messages" default:"false"`
 	SettingsFilename    string `toml:"settings_filename"`
 }
 
+// Enum contains all settings related to how the plugin handles enums.
 type Enum struct {
 	RemovePrefix           bool `toml:"remove_prefix" default:"false"`
 	RemoveUnspecifiedEntry bool `toml:"remove_unspecified_entry" default:"false"`
 }
 
+// Output contains all settings related to the output directory of generated
+// OpenAPI files.
 type Output struct {
 	Path string `toml:"path" default:"openapi"`
 }
 
+// LoadSettings loads the settings from the given TOML file.
 func LoadSettings(filename string) (*Settings, error) {
 	var settings Settings
 

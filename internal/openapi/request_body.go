@@ -8,6 +8,7 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 )
 
+// RequestBody describes a request body.
 type RequestBody struct {
 	Required    bool              `yaml:"required"`
 	Description string            `yaml:"description,omitempty"`

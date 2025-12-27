@@ -8,13 +8,24 @@ import (
 	"github.com/juliangruber/go-intersect"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mikros_extensions"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
-	"google.golang.org/genproto/googleapis/api/annotations"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 )
 
+var (
+	supportedSchemas = []SchemaType{
+		SchemaTypeString,
+		SchemaTypeInteger,
+		SchemaTypeNumber,
+		SchemaTypeBool,
+		SchemaTypeObject,
+		SchemaTypeArray,
+	}
+)
+
+// Schema represents a swagger schema of a field/parameter/object.
 type Schema struct {
 	Minimum              int                `yaml:"minimum,omitempty"`
 	Maximum              int                `yaml:"maximum,omitempty"`
@@ -36,16 +47,21 @@ type Schema struct {
 	field      *protobuf.Field
 }
 
-func newRefSchema(field *protobuf.Field, refDestination string, pkg *protobuf.Protobuf, settings *settings.Settings) *Schema {
+func newRefSchema(
+	field *protobuf.Field,
+	refDestination string,
+	pkg *protobuf.Protobuf,
+	settings *settings.Settings,
+) *Schema {
 	schema := newSchemaFromProtobufField(field, pkg, settings)
 
-	if schema.Type == SchemaType_Array.String() {
+	if schema.Type == SchemaTypeArray.String() {
 		schema.Items = &Schema{
 			Ref: refComponentsSchemas + refDestination,
 		}
 	}
 
-	if schema.Type != SchemaType_Array.String() {
+	if schema.Type != SchemaTypeArray.String() {
 		schema.Type = "" // Clears the type
 		schema.Ref = refComponentsSchemas + refDestination
 	}
@@ -78,16 +94,16 @@ func newSchemaFromProtobufField(field *protobuf.Field, pkg *protobuf.Protobuf, s
 		schema.Enum = getEnumValues(field, pkg, settings)
 	}
 
+	// metadata
 	if field.IsProtoStruct() {
-		// metadata
-		schema.Type = SchemaType_Object.String()
+		schema.Type = SchemaTypeObject.String()
 		schema.AdditionalProperties = &Schema{}
 	}
 
+	// interface
 	if field.IsProtoValue() {
-		// interface
-		schema.Type = SchemaType_Object.String()
-		for _, t := range []SchemaType{SchemaType_String, SchemaType_Integer, SchemaType_Number, SchemaType_Bool, SchemaType_Object, SchemaType_Array} {
+		schema.Type = SchemaTypeObject.String()
+		for _, t := range supportedSchemas {
 			schema.AnyOf = append(schema.AnyOf, &Schema{
 				Type: t.String(),
 			})
@@ -97,12 +113,12 @@ func newSchemaFromProtobufField(field *protobuf.Field, pkg *protobuf.Protobuf, s
 	if field.IsMap() {
 		// Map should always have keys as string, because JSON does not support
 		// other types as keys.
-		schema.Type = SchemaType_Object.String()
+		schema.Type = SchemaTypeObject.String()
 		schema.AdditionalProperties = getMapSchema(field)
 	}
 
 	if field.IsArray() {
-		schema.Type = SchemaType_Array.String()
+		schema.Type = SchemaTypeArray.String()
 		if schema.Items == nil {
 			schema.Items = &Schema{
 				Type: schemaTypeFromProtobufField(field).String(),
@@ -156,17 +172,17 @@ func getMapSchema(field *protobuf.Field) *Schema {
 func schemaTypeFromMapType(mapType protoreflect.Kind) SchemaType {
 	switch mapType {
 	case protoreflect.FloatKind, protoreflect.DoubleKind:
-		return SchemaType_Number
+		return SchemaTypeNumber
 	case protoreflect.MessageKind:
-		return SchemaType_Object
+		return SchemaTypeObject
 	case protoreflect.EnumKind, protoreflect.StringKind, protoreflect.BytesKind:
-		return SchemaType_String
+		return SchemaTypeString
 	case protoreflect.BoolKind:
-		return SchemaType_Bool
+		return SchemaTypeBool
 	default:
 	}
 
-	return SchemaType_Integer
+	return SchemaTypeInteger
 }
 
 func getEnumValues(field *protobuf.Field, pkg *protobuf.Protobuf, settings *settings.Settings) []string {
@@ -250,23 +266,26 @@ func enumStringsIntersection(s1, s2 string) string {
 	return strings.Join(parts, "_") + "_"
 }
 
+// IsRequired returns true if the field is required.
 func (s *Schema) IsRequired() bool {
 	return s.required
 }
 
+// HasAdditionalProperties returns true if the field has additional properties.
 func (s *Schema) HasAdditionalProperties() bool {
 	return s.AdditionalProperties != nil && s.AdditionalProperties != &Schema{}
 }
 
+// GetAdditionalPropertySchemas returns additional properties schemas for the
+// field.
 func (s *Schema) GetAdditionalPropertySchemas(
 	field *protobuf.Field,
 	parser *MessageParser,
-	httpRule *annotations.HttpRule,
 	methodExtensions *mikros_extensions.MikrosMethodExtensions,
-	pathParameters []string,
+	httpCtx *methodHTTPContext,
 ) (map[string]*Schema, error) {
 	if field.MapValueTypeKind() == protoreflect.MessageKind {
-		return getMessageAdditionalSchema(field, parser, httpRule, methodExtensions, pathParameters)
+		return getMessageAdditionalSchema(field, parser, methodExtensions, httpCtx)
 	}
 
 	if field.MapValueTypeKind() == protoreflect.EnumKind {
@@ -281,9 +300,8 @@ func (s *Schema) GetAdditionalPropertySchemas(
 func getMessageAdditionalSchema(
 	field *protobuf.Field,
 	parser *MessageParser,
-	httpRule *annotations.HttpRule,
 	methodExtensions *mikros_extensions.MikrosMethodExtensions,
-	pathParameters []string,
+	httpCtx *methodHTTPContext,
 ) (map[string]*Schema, error) {
 	var (
 		packageName = getPackageName(field.MapValueTypeName())
@@ -308,7 +326,7 @@ func getMessageAdditionalSchema(
 		return msg.Name == trimPackageName(field.MapValueTypeName())
 	})
 	if index != -1 {
-		return parser.GetMessageSchemas(messages[index], httpRule, methodExtensions, pathParameters)
+		return parser.GetMessageSchemas(messages[index], methodExtensions, httpCtx)
 	}
 
 	return nil, nil
@@ -338,7 +356,7 @@ func getEnumAdditionalSchema(field *protobuf.Field, pkg *protobuf.Protobuf) *Sch
 		packageName = getPackageName(field.MapValueTypeName())
 		enums       []*protobuf.Enum
 		schema      = &Schema{
-			Type: SchemaType_String.String(),
+			Type: SchemaTypeString.String(),
 		}
 	)
 
@@ -363,6 +381,7 @@ func getEnumAdditionalSchema(field *protobuf.Field, pkg *protobuf.Protobuf) *Sch
 	return schema
 }
 
+// ProtoField returns the protobuf field that this schema was generated from.
 func (s *Schema) ProtoField() *protobuf.Field {
 	return s.field
 }

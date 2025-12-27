@@ -7,11 +7,13 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/converters"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mikros_extensions"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
+	"google.golang.org/genproto/googleapis/api/annotations"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 )
 
+// Components describes the components of the API.
 type Components struct {
 	Schemas   map[string]*Schema   `yaml:"schemas"`
 	Responses map[string]*Response `yaml:"responses"`
@@ -49,6 +51,11 @@ func parseComponentsSchemas(pkg *protobuf.Protobuf, settings *settings.Settings)
 	return schemas, nil
 }
 
+type methodHTTPContext struct {
+	httpRule       *annotations.HttpRule
+	pathParameters []string
+}
+
 func getMethodComponentsSchemas(pkg *protobuf.Protobuf, settings *settings.Settings) (map[string]*Schema, error) {
 	var (
 		schemas = make(map[string]*Schema)
@@ -56,60 +63,81 @@ func getMethodComponentsSchemas(pkg *protobuf.Protobuf, settings *settings.Setti
 			Package:  pkg,
 			Settings: settings,
 		}
-		converter = converters.NewMessage(converters.MessageOptions{
-			Settings: settings.MikrosSettings,
-		})
 	)
 
 	for _, method := range pkg.Service.Methods {
-		var (
-			httpRule          = mikros_extensions.LoadGoogleAnnotations(method.Proto)
-			methodExtensions  = mikros_extensions.LoadMethodExtensions(method.Proto)
-			extensions        = mikros_openapi.LoadMethodExtensions(method.Proto)
-			pathParameters, _ = getEndpointInformation(httpRule)
-		)
+		httpCtx, methodExt, ext := loadMethodContext(method)
 
-		request, err := findMessage(method.RequestType.Name, pkg)
+		reqMsg, respMsg, err := resolveReqRespMessages(method, pkg)
 		if err != nil {
 			return nil, err
 		}
 
-		response, err := findMessage(method.ResponseType.Name, pkg)
-		if err != nil {
+		if err := collectRequestSchemas(
+			parser,
+			reqMsg,
+			methodExt,
+			ext,
+			httpCtx,
+			settings,
+			schemas,
+		); err != nil {
 			return nil, err
 		}
 
-		requests, err := parser.GetMessageSchemas(request, httpRule, methodExtensions, pathParameters)
-		if err != nil {
+		if err := collectResponseSchemas(
+			parser,
+			respMsg,
+			methodExt,
+			httpCtx,
+			settings,
+			schemas,
+		); err != nil {
 			return nil, err
-		}
-		if settings.Mikros.UseInboundMessages && !extensions.GetDisableInboundProcessing() {
-			requests = processInboundMessages(requests, settings)
-		}
-		for name, schema := range requests {
-			schemas[name] = schema
-		}
-
-		responses, err := parser.GetMessageSchemas(response, httpRule, methodExtensions, pathParameters)
-		if err != nil {
-			return nil, err
-		}
-		if settings.Mikros.UseOutboundMessages {
-			responses = processOutboundMessages(responses, settings)
-		}
-		for name, schema := range responses {
-			if settings.Mikros.UseOutboundMessages {
-				name = converter.WireOutputToOutbound(name)
-			}
-
-			schemas[name] = schema
 		}
 	}
 
 	return schemas, nil
 }
 
-func findMessage(msgName string, pkg *protobuf.Protobuf) (*protobuf.Message, error) {
+// loadMethodContext centralizes extraction of annotations and path params.
+func loadMethodContext(method *protobuf.Method) (
+	*methodHTTPContext,
+	*mikros_extensions.MikrosMethodExtensions,
+	*mikros_openapi.OpenapiMethod,
+) {
+	httpRule := mikros_extensions.LoadGoogleAnnotations(method.Proto)
+	methodExtensions := mikros_extensions.LoadMethodExtensions(method.Proto)
+	extensions := mikros_openapi.LoadMethodExtensions(method.Proto)
+	pathParameters, _ := getEndpointInformation(httpRule)
+
+	return &methodHTTPContext{
+		httpRule,
+		pathParameters,
+	}, methodExtensions, extensions
+}
+
+// resolveReqRespMessages finds request/response messages.
+func resolveReqRespMessages(
+	method *protobuf.Method,
+	pkg *protobuf.Protobuf,
+) (*protobuf.Message, *protobuf.Message, error) {
+	req, err := FindMessageByName(method.RequestType.Name, pkg)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	resp, err := FindMessageByName(method.ResponseType.Name, pkg)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return req, resp, nil
+}
+
+// FindMessageByName finds a message by its name inside the loaded protobuf
+// messages.
+func FindMessageByName(msgName string, pkg *protobuf.Protobuf) (*protobuf.Message, error) {
 	msgIndex := slices.IndexFunc(pkg.Messages, func(msg *protobuf.Message) bool {
 		return msg.Name == msgName
 	})
@@ -120,65 +148,153 @@ func findMessage(msgName string, pkg *protobuf.Protobuf) (*protobuf.Message, err
 	return pkg.Messages[msgIndex], nil
 }
 
+// collectRequestSchemas parses, optionally processes inbound, and merges into accumulator.
+func collectRequestSchemas(
+	parser *MessageParser,
+	request *protobuf.Message,
+	methodExtensions *mikros_extensions.MikrosMethodExtensions,
+	extensions *mikros_openapi.OpenapiMethod,
+	httpCtx *methodHTTPContext,
+	settings *settings.Settings,
+	acc map[string]*Schema,
+) error {
+	reqSchemas, err := parser.GetMessageSchemas(request, methodExtensions, httpCtx)
+	if err != nil {
+		return err
+	}
+	if settings.Mikros.UseInboundMessages && !extensions.GetDisableInboundProcessing() {
+		reqSchemas = processInboundMessages(reqSchemas, settings)
+	}
+
+	mergeSchemas(acc, reqSchemas, nil)
+	return nil
+}
+
 func processInboundMessages(schemas map[string]*Schema, settings *settings.Settings) map[string]*Schema {
 	for _, schema := range schemas {
-		if len(schema.Properties) > 0 {
-			properties := make(map[string]*Schema)
-			for _, property := range schema.Properties {
-				converter, _ := converters.NewField(converters.FieldOptions{
-					IsHTTPService: true,
-					ProtoField:    property.field,
-					ProtoMessage:  schema.Message,
-					Settings:      settings.MikrosSettings,
-				})
-				properties[converter.InboundName()] = property
-			}
-			schema.Properties = properties
+		if len(schema.Properties) == 0 {
+			continue
 		}
+
+		properties := make(map[string]*Schema)
+		for _, property := range schema.Properties {
+			converter, _ := converters.NewField(converters.FieldOptions{
+				IsHTTPService: true,
+				ProtoField:    property.field,
+				ProtoMessage:  schema.Message,
+				Settings:      settings.MikrosSettings,
+			})
+
+			properties[converter.InboundName()] = property
+		}
+		schema.Properties = properties
 	}
 
 	return schemas
 }
 
+// collectResponseSchemas parses, optionally processes outbound, renames when
+// needed, and merges.
+func collectResponseSchemas(
+	parser *MessageParser,
+	response *protobuf.Message,
+	methodExtensions *mikros_extensions.MikrosMethodExtensions,
+	httpCtx *methodHTTPContext,
+	settings *settings.Settings,
+	acc map[string]*Schema,
+) error {
+	respSchemas, err := parser.GetMessageSchemas(response, methodExtensions, httpCtx)
+	if err != nil {
+		return err
+	}
+
+	var nameConv func(string) string
+	if settings.Mikros.UseOutboundMessages {
+		respSchemas = processOutboundMessages(respSchemas, settings)
+		converter := converters.NewMessage(converters.MessageOptions{
+			Settings: settings.MikrosSettings,
+		})
+
+		nameConv = converter.WireOutputToOutbound
+	}
+
+	mergeSchemas(acc, respSchemas, nameConv)
+	return nil
+}
+
+// mergeSchemas copies all kv pairs from src into dst, optionally renaming keys.
+func mergeSchemas(dst, src map[string]*Schema, keyTransform func(string) string) {
+	for name, schema := range src {
+		if keyTransform != nil {
+			name = keyTransform(name)
+		}
+
+		dst[name] = schema
+	}
+}
+
 func processOutboundMessages(schemas map[string]*Schema, settings *settings.Settings) map[string]*Schema {
 	for _, schema := range schemas {
-		if schemaNeedsConversion(schema) {
-			converter := converters.NewMessage(converters.MessageOptions{
-				Settings: settings.MikrosSettings,
-			})
-
-			if schema.Ref != "" {
-				schema.Ref = converter.WireOutputToOutbound(schema.Ref)
-			}
-
-			if len(schema.Properties) > 0 {
-				properties := make(map[string]*Schema)
-				for _, property := range schema.Properties {
-					if property.Ref != "" {
-						property.Ref = converter.WireOutputToOutbound(property.Ref)
-					}
-
-					if property.AdditionalProperties != nil && property.AdditionalProperties.Ref != "" {
-						property.AdditionalProperties.Ref = converter.WireOutputToOutbound(property.AdditionalProperties.Ref)
-					}
-
-					if property.Items != nil && property.Items.Ref != "" {
-						property.Items.Ref = converter.WireOutputToOutbound(property.Items.Ref)
-					}
-
-					fieldConverter, _ := converters.NewField(converters.FieldOptions{
-						IsHTTPService: true,
-						ProtoField:    property.field,
-						ProtoMessage:  schema.Message,
-					})
-					properties[fieldConverter.OutboundJsonTagFieldName()] = property
-				}
-				schema.Properties = properties
-			}
+		if !schemaNeedsConversion(schema) {
+			continue
 		}
+
+		converter := converters.NewMessage(converters.MessageOptions{
+			Settings: settings.MikrosSettings,
+		})
+
+		convertSchemaRef(schema, converter)
+		renameAndConvertProperties(schema, converter)
 	}
 
 	return schemas
+}
+
+// convertSchemaRef converts the top-level schema reference if present.
+func convertSchemaRef(schema *Schema, converter *converters.Message) {
+	if schema.Ref == "" {
+		return
+	}
+	schema.Ref = converter.WireOutputToOutbound(schema.Ref)
+}
+
+// renameAndConvertProperties rebuilds properties map with converted refs and
+// outbound JSON tag names.
+func renameAndConvertProperties(schema *Schema, converter *converters.Message) {
+	if len(schema.Properties) == 0 {
+		return
+	}
+
+	properties := make(map[string]*Schema)
+	for _, property := range schema.Properties {
+		convertPropertyRefs(property, converter)
+
+		fieldConverter, _ := converters.NewField(converters.FieldOptions{
+			IsHTTPService: true,
+			ProtoField:    property.field,
+			ProtoMessage:  schema.Message,
+		})
+
+		properties[fieldConverter.OutboundJsonTagFieldName()] = property
+	}
+
+	schema.Properties = properties
+}
+
+// convertPropertyRefs converts refs for property, its additionalProperties, and
+// items when present.
+func convertPropertyRefs(property *Schema, converter *converters.Message) {
+	if property.Ref != "" {
+		property.Ref = converter.WireOutputToOutbound(property.Ref)
+	}
+
+	if property.AdditionalProperties != nil && property.AdditionalProperties.Ref != "" {
+		property.AdditionalProperties.Ref = converter.WireOutputToOutbound(property.AdditionalProperties.Ref)
+	}
+
+	if property.Items != nil && property.Items.Ref != "" {
+		property.Items.Ref = converter.WireOutputToOutbound(property.Items.Ref)
+	}
 }
 
 func schemaNeedsConversion(schema *Schema) bool {
@@ -206,22 +322,22 @@ func schemaNeedsConversion(schema *Schema) bool {
 func getErrorComponentsSchemas() map[string]*Schema {
 	return map[string]*Schema{
 		"DefaultError": {
-			Type: SchemaType_Object.String(),
+			Type: SchemaTypeObject.String(),
 			Properties: map[string]*Schema{
 				"code": {
-					Type: SchemaType_Integer.String(),
+					Type: SchemaTypeInteger.String(),
 				},
 				"service_name": {
-					Type: SchemaType_String.String(),
+					Type: SchemaTypeString.String(),
 				},
 				"message": {
-					Type: SchemaType_String.String(),
+					Type: SchemaTypeString.String(),
 				},
 				"destination": {
-					Type: SchemaType_String.String(),
+					Type: SchemaTypeString.String(),
 				},
 				"kind": {
-					Type: SchemaType_String.String(),
+					Type: SchemaTypeString.String(),
 				},
 			},
 		},
