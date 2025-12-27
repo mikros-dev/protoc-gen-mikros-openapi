@@ -6,6 +6,7 @@ import (
 
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mikros_extensions"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
+
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 )
@@ -25,27 +26,39 @@ func (m *MessageParser) GetMessageSchemas(
 	httpCtx *methodHTTPContext,
 ) (map[string]*Schema, error) {
 	var (
-		schemas  = make(map[string]*Schema)
-		props    = make(map[string]*Schema)
-		required []string
+		schemas            = make(map[string]*Schema)
+		props              = make(map[string]*Schema)
+		requiredProperties []string
 	)
 
 	m.addParsedMessage(message.Name)
 
 	for _, f := range message.Fields {
-		isRequired, err := m.processField(f, methodExtensions, httpCtx, message, schemas, props)
+		ext := mikros_openapi.LoadFieldExtensions(f.Proto)
+		if m.shouldSkipField(ext) {
+			continue
+		}
+
+		isRequired, err := m.processField(f, ext, methodExtensions, httpCtx, message, schemas, props)
 		if err != nil {
 			return nil, err
 		}
 		if isRequired {
-			required = append(required, f.Name)
+			// Check if the property has a custom name coming from the protobuf
+			// annotation.
+			fieldName := f.Name
+			if ext != nil && ext.GetSchemaName() != "" {
+				fieldName = ext.GetSchemaName()
+			}
+
+			requiredProperties = append(requiredProperties, fieldName)
 		}
 	}
 
 	schemas[message.Name] = &Schema{
 		Type:               SchemaTypeObject.String(),
 		Properties:         props,
-		RequiredProperties: required,
+		RequiredProperties: requiredProperties,
 		Message:            message,
 	}
 
@@ -62,16 +75,12 @@ func (m *MessageParser) addParsedMessage(name string) {
 
 func (m *MessageParser) processField(
 	field *protobuf.Field,
+	ext *mikros_openapi.Property,
 	methodExtensions *mikros_extensions.MikrosMethodExtensions,
 	httpCtx *methodHTTPContext,
 	message *protobuf.Message,
 	schemas, props map[string]*Schema,
 ) (bool, error) {
-	ext := mikros_openapi.LoadFieldExtensions(field.Proto)
-	if m.shouldSkipField(ext) {
-		return false, nil
-	}
-
 	if shouldHandleChildMessage(field) {
 		return m.handleChildField(field, methodExtensions, httpCtx, schemas, props)
 	}
