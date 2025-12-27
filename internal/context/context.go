@@ -11,11 +11,14 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
 )
 
+// Context holds the context for the OpenAPI generation. This structure is
+// available inside template files.
 type Context struct {
 	Openapi  *openapi.Openapi
 	Settings *settings.Settings
 }
 
+// BuildContext builds the main context for the OpenAPI generation.
 func BuildContext(plugin *protogen.Plugin, pluginArgs *args.Args) (*Context, error) {
 	// Load Mikros-extensions Settings. It returns default values if no
 	// file is used.
@@ -24,7 +27,7 @@ func BuildContext(plugin *protogen.Plugin, pluginArgs *args.Args) (*Context, err
 		return nil, fmt.Errorf("could not load Settings file: %w", err)
 	}
 
-	// Build the api specific context
+	// Build the api-specific context
 	api, err := openapi.FromProto(plugin, cfg)
 	if err != nil {
 		return nil, err
@@ -40,6 +43,7 @@ func BuildContext(plugin *protogen.Plugin, pluginArgs *args.Args) (*Context, err
 	}, nil
 }
 
+// OutputOpenapi returns the OpenAPI document as a YAML string.
 func (c *Context) OutputOpenapi() (string, error) {
 	b, err := yaml.Marshal(c.Openapi)
 	if err != nil {

@@ -6,62 +6,64 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 )
 
+// SchemaType describes the type of the schema.
 type SchemaType int
 
+// Supported schema types.
 const (
-	SchemaType_Unspecified SchemaType = iota
-	SchemaType_Object
-	SchemaType_String
-	SchemaType_Array
-	SchemaType_Bool
-	SchemaType_Integer
-	SchemaType_Number
+	SchemaTypeUnspecified SchemaType = iota
+	SchemaTypeObject
+	SchemaTypeString
+	SchemaTypeArray
+	SchemaTypeBool
+	SchemaTypeInteger
+	SchemaTypeNumber
 )
 
 func schemaTypeFromProtobufField(field *protobuf.Field) SchemaType {
 	switch field.Type {
 	case descriptor.FieldDescriptorProto_TYPE_STRING:
-		return SchemaType_String
+		return SchemaTypeString
 
 	case descriptor.FieldDescriptorProto_TYPE_ENUM:
-		return SchemaType_String
+		return SchemaTypeString
 
 	case descriptor.FieldDescriptorProto_TYPE_BOOL:
-		return SchemaType_Bool
+		return SchemaTypeBool
 
 	case descriptor.FieldDescriptorProto_TYPE_DOUBLE, descriptor.FieldDescriptorProto_TYPE_FLOAT:
-		return SchemaType_Number
+		return SchemaTypeNumber
 
 	case descriptor.FieldDescriptorProto_TYPE_MESSAGE:
 		if field.IsTimestamp() {
-			return SchemaType_String
+			return SchemaTypeString
 		}
 
 	default:
-		return SchemaType_Integer
+		return SchemaTypeInteger
 	}
 
-	return SchemaType_Unspecified
+	return SchemaTypeUnspecified
 }
 
 func (s SchemaType) String() string {
 	switch s {
-	case SchemaType_Integer:
+	case SchemaTypeInteger:
 		return "integer"
 
-	case SchemaType_Number:
+	case SchemaTypeNumber:
 		return "number"
 
-	case SchemaType_Bool:
+	case SchemaTypeBool:
 		return "boolean"
 
-	case SchemaType_Object:
+	case SchemaTypeObject:
 		return "object"
 
-	case SchemaType_String:
+	case SchemaTypeString:
 		return "string"
 
-	case SchemaType_Array:
+	case SchemaTypeArray:
 		return "array"
 
 	default:

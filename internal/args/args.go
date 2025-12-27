@@ -8,12 +8,14 @@ import (
 	"strings"
 )
 
+// Args represents the plugin arguments read from the buf.gen.yaml settings
+// file.
 type Args struct {
-	Output           string
 	SettingsFilename string
 	flags            flag.FlagSet
 }
 
+// NewArgsFromString parses the plugin arguments from the given string.
 func NewArgsFromString(s string) (*Args, error) {
 	if s == "" {
 		return &Args{}, nil
@@ -35,10 +37,6 @@ func NewArgsFromString(s string) (*Args, error) {
 			value = parts[1]
 		)
 
-		if key == "output" {
-			args.Output = value
-		}
-
 		if key == "settings" {
 			args.SettingsFilename = value
 		}
@@ -47,6 +45,7 @@ func NewArgsFromString(s string) (*Args, error) {
 	return args, nil
 }
 
+// GetPluginName returns the name of the plugin executable.
 func (a *Args) GetPluginName() string {
 	return filepath.Base(os.Args[0])
 }

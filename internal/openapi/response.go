@@ -10,13 +10,18 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 )
 
+// Response describes a single response from an API Operation.
 type Response struct {
 	Description string            `yaml:"description,omitempty"`
 	Content     map[string]*Media `yaml:"content"`
 	schemaName  string
 }
 
-func parseOperationResponses(method *protobuf.Method, settings *settings.Settings, converter *converters.Message) map[string]*Response {
+func parseOperationResponses(
+	method *protobuf.Method,
+	settings *settings.Settings,
+	converter *converters.Message,
+) map[string]*Response {
 	codes := getMethodResponseCodes(method)
 	if len(codes) == 0 {
 		return nil

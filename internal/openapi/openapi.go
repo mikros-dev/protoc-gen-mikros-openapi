@@ -8,6 +8,7 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 )
 
+// Openapi describes the entire OpenAPI specification.
 type Openapi struct {
 	Version    string                           `yaml:"openapi"`
 	Info       *Info                            `yaml:"info"`
@@ -18,17 +19,20 @@ type Openapi struct {
 	moduleName string
 }
 
+// Info describes the service.
 type Info struct {
 	Title       string `yaml:"title"`
 	Version     string `yaml:"version"`
 	Description string `yaml:"description,omitempty"`
 }
 
+// Server describes a server.
 type Server struct {
-	Url         string `yaml:"url"`
+	URL         string `yaml:"url"`
 	Description string `yaml:"description,omitempty"`
 }
 
+// FromProto creates an Openapi instance from the given protoc plugin.
 func FromProto(plugin *protogen.Plugin, settings *settings.Settings) (*Openapi, error) {
 	pkg, err := protobuf.Parse(protobuf.ParseOptions{
 		Plugin: plugin,
@@ -71,7 +75,8 @@ func parseInfo(pkg *protobuf.Protobuf) *Info {
 		description string
 	)
 
-	if metadata := mikros_openapi.LoadMetadata(pkg.PackageFiles[pkg.ModuleName+"_api"].Proto); metadata != nil && metadata.GetInfo() != nil {
+	metadata := mikros_openapi.LoadMetadata(pkg.PackageFiles[pkg.ModuleName+"_api"].Proto)
+	if metadata != nil && metadata.GetInfo() != nil {
 		title = metadata.GetInfo().GetTitle()
 		description = metadata.GetInfo().GetDescription()
 		version = metadata.GetInfo().GetVersion()
@@ -93,7 +98,7 @@ func parseServers(pkg *protobuf.Protobuf) []*Server {
 	if metadata != nil {
 		for _, server := range metadata.GetServer() {
 			servers = append(servers, &Server{
-				Url:         server.GetUrl(),
+				URL:         server.GetUrl(),
 				Description: server.GetDescription(),
 			})
 		}
@@ -102,6 +107,7 @@ func parseServers(pkg *protobuf.Protobuf) []*Server {
 	return servers
 }
 
+// ModuleName returns the name of the module.
 func (o *Openapi) ModuleName() string {
 	return o.moduleName
 }

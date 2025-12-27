@@ -11,9 +11,10 @@ import (
 	"google.golang.org/protobuf/types/pluginpb"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/args"
-	mcontext "github.com/mikros-dev/protoc-gen-mikros-openapi/internal/context"
+	pcontext "github.com/mikros-dev/protoc-gen-mikros-openapi/internal/context"
 )
 
+// Handle is the entry point for the plugin to be processed by protoc/buf.
 func Handle(
 	_ context.Context,
 	_ protoplugin.PluginEnv,
@@ -37,8 +38,9 @@ func Handle(
 
 	response := plugin.Response()
 	w.AddCodeGeneratorResponseFiles(response.GetFile()...)
-	w.SetSupportedFeatures(uint64(pluginpb.CodeGeneratorResponse_FEATURE_PROTO3_OPTIONAL) | uint64(pluginpb.CodeGeneratorResponse_FEATURE_SUPPORTS_EDITIONS))
 	w.SetFeatureSupportsEditions(descriptorpb.Edition_EDITION_PROTO2, descriptorpb.Edition_EDITION_2024)
+	w.SetSupportedFeatures(uint64(pluginpb.CodeGeneratorResponse_FEATURE_PROTO3_OPTIONAL) |
+		uint64(pluginpb.CodeGeneratorResponse_FEATURE_SUPPORTS_EDITIONS))
 
 	if content != "" {
 		w.AddFile(filepath.Join(name, "openapi.yaml"), content)
@@ -48,7 +50,7 @@ func Handle(
 }
 
 func handleProtogenPlugin(plugin *protogen.Plugin, pluginArgs *args.Args) (string, string, error) {
-	ctx, err := mcontext.BuildContext(plugin, pluginArgs)
+	ctx, err := pcontext.BuildContext(plugin, pluginArgs)
 	if err != nil {
 		return "", "", err
 	}

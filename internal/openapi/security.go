@@ -6,6 +6,7 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 )
 
+// Security describes security schemes supported by the API.
 type Security struct {
 	Type         string `yaml:"type"`
 	Scheme       string `yaml:"scheme"`

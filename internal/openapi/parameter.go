@@ -13,6 +13,7 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 )
 
+// Parameter describes a single operation parameter.
 type Parameter struct {
 	Required    bool    `yaml:"required"`
 	Location    string  `yaml:"in"`
@@ -21,7 +22,12 @@ type Parameter struct {
 	Schema      *Schema `yaml:"schema,omitempty"`
 }
 
-func parseOperationParameters(method *protobuf.Method, httpRule *annotations.HttpRule, pkg *protobuf.Protobuf, settings *settings.Settings) ([]*Parameter, error) {
+func parseOperationParameters(
+	method *protobuf.Method,
+	httpRule *annotations.HttpRule,
+	pkg *protobuf.Protobuf,
+	settings *settings.Settings,
+) ([]*Parameter, error) {
 	requestMessage, err := findMethodRequestMessage(method, pkg)
 	if err != nil {
 		return nil, err
@@ -70,7 +76,14 @@ func getEndpointInformation(httpRule *annotations.HttpRule) ([]string, string) {
 	return mikros_extensions.RetrieveParameters(endpoint), method
 }
 
-func parseOperationParameter(method *protobuf.Method, field *protobuf.Field, message *protobuf.Message, pathParameters []string, httpRule *annotations.HttpRule, settings *settings.Settings) (*Parameter, error) {
+func parseOperationParameter(
+	method *protobuf.Method,
+	field *protobuf.Field,
+	message *protobuf.Message,
+	pathParameters []string,
+	httpRule *annotations.HttpRule,
+	settings *settings.Settings,
+) (*Parameter, error) {
 	var (
 		properties       = mikros_openapi.LoadFieldExtensions(field.Proto)
 		methodExtensions = mikros_extensions.LoadMethodExtensions(method.Proto)
