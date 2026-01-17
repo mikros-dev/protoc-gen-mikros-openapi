@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 
 	"github.com/bufbuild/protoplugin"
@@ -9,15 +10,17 @@ import (
 	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/types/pluginpb"
 
+	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/ctxutil"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/log"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/args"
 	pcontext "github.com/mikros-dev/protoc-gen-mikros-openapi/internal/context"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
 )
 
 // Handle is the entry point for the plugin to be processed by protoc/buf.
 func Handle(
-	_ context.Context,
+	ctx context.Context,
 	_ protoplugin.PluginEnv,
 	w protoplugin.ResponseWriter,
 	r protoplugin.Request,
@@ -32,7 +35,7 @@ func Handle(
 		return err
 	}
 
-	content, name, err := handleProtogenPlugin(plugin, pluginArgs)
+	content, name, err := handleProtogenPlugin(ctx, plugin, pluginArgs)
 	if err != nil {
 		return err
 	}
@@ -44,28 +47,47 @@ func Handle(
 		uint64(pluginpb.CodeGeneratorResponse_FEATURE_SUPPORTS_EDITIONS))
 
 	if content != "" {
-		w.AddFile(filepath.Join(name, "openapi.yaml"), content)
+		w.AddFile(name, content)
 	}
 
 	return nil
 }
 
-func handleProtogenPlugin(plugin *protogen.Plugin, pluginArgs *args.Args) (string, string, error) {
-	ctx, err := pcontext.BuildContext(plugin, pluginArgs)
+func handleProtogenPlugin(ctx context.Context, plugin *protogen.Plugin, pluginArgs *args.Args) (string, string, error) {
+	cfg, err := settings.LoadSettings(pluginArgs.SettingsFilename)
 	if err != nil {
-		return "", "", err
-	}
-	if ctx == nil {
-		return "", "", nil
+		return "", "", fmt.Errorf("could not load settings file: %w", err)
 	}
 
 	logger := log.New(log.LoggerOptions{
-		Verbose: ctx.Settings.Debug,
+		Verbose: cfg.Debug,
 		Prefix:  "[mikros-openapi]",
 	})
+	ctx = ctxutil.WithLogger(ctx, logger)
 
-	logger.Println("processing module:", ctx.Openapi.ModuleName())
+	// Build the context for the template generation
+	tplContext, err := pcontext.BuildContext(ctx, plugin, cfg)
+	if err != nil {
+		return "", "", err
+	}
+	if tplContext == nil {
+		return "", "", nil
+	}
 
-	content, err := ctx.OutputOpenapi()
-	return content, filepath.Join(ctx.Settings.Output.Path, ctx.Openapi.ModuleName()), err
+	logger.Println("processing module:", tplContext.Openapi.ModuleName())
+	content, err := tplContext.OutputOpenapi()
+
+	// Defines the destination directory for the generated file
+	outputDir := filepath.Join(tplContext.Settings.Output.Path, tplContext.Openapi.ModuleName())
+	if cfg.Output.UseDefaultOut {
+		outputDir = ""
+	}
+
+	// And the filename
+	filename := cfg.Output.Filename
+	if filename == "" {
+		filename = "openapi.yaml"
+	}
+
+	return content, filepath.Join(outputDir, filename), err
 }

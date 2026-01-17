@@ -30,6 +30,7 @@ func parseOperationResponses(
 	var (
 		responses = make(map[string]*Response)
 		name      = method.ResponseType.Name
+		errorName = settings.Error.DefaultName
 	)
 
 	if settings.Mikros.UseOutboundMessages {
@@ -37,7 +38,7 @@ func parseOperationResponses(
 	}
 
 	for _, code := range codes {
-		refName := refComponentsSchemas + "DefaultError"
+		refName := refComponentsSchemas + errorName
 		if isSuccessCode(code) {
 			refName = refComponentsSchemas + name
 		}

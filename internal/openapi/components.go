@@ -21,23 +21,23 @@ type Components struct {
 	Security  map[string]*Security `yaml:"securitySchemes,omitempty"`
 }
 
-func parseComponents(pkg *protobuf.Protobuf, settings *settings.Settings) (*Components, error) {
-	schemas, err := parseComponentsSchemas(pkg, settings)
+func parseComponents(pkg *protobuf.Protobuf, cfg *settings.Settings) (*Components, error) {
+	schemas, err := parseComponentsSchemas(pkg, cfg)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Components{
 		Schemas:   schemas,
-		Responses: parseComponentsResponses(pkg),
+		Responses: parseComponentsResponses(pkg, cfg),
 		Security:  parseComponentsSecurity(pkg),
 	}, nil
 }
 
-func parseComponentsSchemas(pkg *protobuf.Protobuf, settings *settings.Settings) (map[string]*Schema, error) {
+func parseComponentsSchemas(pkg *protobuf.Protobuf, cfg *settings.Settings) (map[string]*Schema, error) {
 	schemas := make(map[string]*Schema)
 
-	methodComponents, err := getMethodComponentsSchemas(pkg, settings)
+	methodComponents, err := getMethodComponentsSchemas(pkg, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func parseComponentsSchemas(pkg *protobuf.Protobuf, settings *settings.Settings)
 		schemas[name] = schema
 	}
 
-	for name, schema := range getErrorComponentsSchemas() {
+	for name, schema := range getErrorComponentsSchemas(cfg) {
 		schemas[name] = schema
 	}
 
@@ -57,12 +57,12 @@ type methodHTTPContext struct {
 	pathParameters []string
 }
 
-func getMethodComponentsSchemas(pkg *protobuf.Protobuf, settings *settings.Settings) (map[string]*Schema, error) {
+func getMethodComponentsSchemas(pkg *protobuf.Protobuf, cfg *settings.Settings) (map[string]*Schema, error) {
 	var (
 		schemas = make(map[string]*Schema)
 		parser  = &MessageParser{
 			Package:  pkg,
-			Settings: settings,
+			Settings: cfg,
 		}
 	)
 
@@ -80,7 +80,7 @@ func getMethodComponentsSchemas(pkg *protobuf.Protobuf, settings *settings.Setti
 			methodExt,
 			ext,
 			httpCtx,
-			settings,
+			cfg,
 			schemas,
 		); err != nil {
 			return nil, err
@@ -91,7 +91,7 @@ func getMethodComponentsSchemas(pkg *protobuf.Protobuf, settings *settings.Setti
 			respMsg,
 			methodExt,
 			httpCtx,
-			settings,
+			cfg,
 			schemas,
 		); err != nil {
 			return nil, err
@@ -292,7 +292,7 @@ func renameAndConvertProperties(schema *Schema, converter *mapping.Message) erro
 		}
 
 		fieldTag, err := mapping.NewFieldTag(&mapping.FieldTagOptions{
-			FieldNaming:  naming,
+			FieldNaming: naming,
 			FieldMappingContextOptions: &mapping.FieldMappingContextOptions{
 				ProtoField:   property.field,
 				ProtoMessage: schema.Message,
@@ -347,36 +347,28 @@ func schemaNeedsConversion(schema *Schema) bool {
 	return schema.Ref != "" || propertyRef
 }
 
-func getErrorComponentsSchemas() map[string]*Schema {
+func getErrorComponentsSchemas(cfg *settings.Settings) map[string]*Schema {
+	properties := make(map[string]*Schema)
+
+	for name, field := range cfg.Error.Fields {
+		properties[name] = &Schema{
+			Type: field.Type,
+		}
+	}
+
 	return map[string]*Schema{
-		"DefaultError": {
-			Type: SchemaTypeObject.String(),
-			Properties: map[string]*Schema{
-				"code": {
-					Type: SchemaTypeInteger.String(),
-				},
-				"service_name": {
-					Type: SchemaTypeString.String(),
-				},
-				"message": {
-					Type: SchemaTypeString.String(),
-				},
-				"destination": {
-					Type: SchemaTypeString.String(),
-				},
-				"kind": {
-					Type: SchemaTypeString.String(),
-				},
-			},
+		cfg.Error.DefaultName: {
+			Type:       SchemaTypeObject.String(),
+			Properties: properties,
 		},
 	}
 }
 
-func parseComponentsResponses(pkg *protobuf.Protobuf) map[string]*Response {
+func parseComponentsResponses(pkg *protobuf.Protobuf, cfg *settings.Settings) map[string]*Response {
 	responses := make(map[string]*Response)
 
 	for _, method := range pkg.Service.Methods {
-		for _, response := range parseMethodComponentsResponses(method) {
+		for _, response := range parseMethodComponentsResponses(method, cfg) {
 			responses[response.schemaName] = response
 		}
 	}
@@ -384,7 +376,7 @@ func parseComponentsResponses(pkg *protobuf.Protobuf) map[string]*Response {
 	return responses
 }
 
-func parseMethodComponentsResponses(method *protobuf.Method) []*Response {
+func parseMethodComponentsResponses(method *protobuf.Method, cfg *settings.Settings) []*Response {
 	codes := getMethodResponseCodes(method)
 	if len(codes) == 0 {
 		return nil
@@ -396,13 +388,14 @@ func parseMethodComponentsResponses(method *protobuf.Method) []*Response {
 			continue
 		}
 
+		errorName := cfg.Error.DefaultName
 		responses = append(responses, &Response{
-			schemaName:  "DefaultError",
+			schemaName:  errorName,
 			Description: "The default error response.",
 			Content: map[string]*Media{
 				"application/json": {
 					Schema: &Schema{
-						Ref: refComponentsSchemas + "DefaultError",
+						Ref: refComponentsSchemas + errorName,
 					},
 				},
 			},

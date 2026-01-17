@@ -1,8 +1,11 @@
 package openapi
 
 import (
-	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
+	"context"
+
 	"google.golang.org/protobuf/compiler/protogen"
+
+	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
@@ -33,7 +36,7 @@ type Server struct {
 }
 
 // FromProto creates an Openapi instance from the given protoc plugin.
-func FromProto(plugin *protogen.Plugin, settings *settings.Settings) (*Openapi, error) {
+func FromProto(_ context.Context, plugin *protogen.Plugin, cfg *settings.Settings) (*Openapi, error) {
 	pkg, err := protobuf.Parse(protobuf.ParseOptions{
 		Plugin: plugin,
 	})
@@ -44,20 +47,20 @@ func FromProto(plugin *protogen.Plugin, settings *settings.Settings) (*Openapi, 
 		return nil, nil
 	}
 
-	pathItems, err := parsePathItems(pkg, settings)
+	pathItems, err := parsePathItems(pkg, cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	components, err := parseComponents(pkg, settings)
+	components, err := parseComponents(pkg, cfg)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Openapi{
 		Version:    "3.0.0",
-		Info:       parseInfo(pkg),
-		Servers:    parseServers(pkg),
+		Info:       parseInfo(pkg, cfg),
+		Servers:    parseServers(pkg, cfg),
 		PathItems:  pathItems,
 		Components: components,
 		moduleName: pkg.ModuleName,
@@ -68,14 +71,19 @@ func isHTTPService(pkg *protobuf.Protobuf) bool {
 	return pkg.Service != nil && pkg.Service.IsHTTP()
 }
 
-func parseInfo(pkg *protobuf.Protobuf) *Info {
+func parseInfo(pkg *protobuf.Protobuf, cfg *settings.Settings) *Info {
 	var (
-		version     = "v0.1.0"
-		title       = pkg.ModuleName
-		description string
+		version        = "v0.1.0"
+		title          = pkg.ModuleName
+		mainModuleName = pkg.ModuleName
+		description    string
 	)
 
-	metadata := mikros_openapi.LoadMetadata(pkg.PackageFiles[pkg.ModuleName+"_api"].Proto)
+	if cfg.Mikros.KeepMainModuleFilePrefix {
+		mainModuleName = pkg.ModuleName + "_api"
+	}
+
+	metadata := mikros_openapi.LoadMetadata(pkg.PackageFiles[mainModuleName].Proto)
 	if metadata != nil && metadata.GetInfo() != nil {
 		title = metadata.GetInfo().GetTitle()
 		description = metadata.GetInfo().GetDescription()
@@ -89,9 +97,14 @@ func parseInfo(pkg *protobuf.Protobuf) *Info {
 	}
 }
 
-func parseServers(pkg *protobuf.Protobuf) []*Server {
+func parseServers(pkg *protobuf.Protobuf, cfg *settings.Settings) []*Server {
+	mainModuleName := pkg.ModuleName
+	if cfg.Mikros.KeepMainModuleFilePrefix {
+		mainModuleName = pkg.ModuleName + "_api"
+	}
+
 	var (
-		metadata = mikros_openapi.LoadMetadata(pkg.PackageFiles[pkg.ModuleName+"_api"].Proto)
+		metadata = mikros_openapi.LoadMetadata(pkg.PackageFiles[mainModuleName].Proto)
 		servers  []*Server
 	)
 

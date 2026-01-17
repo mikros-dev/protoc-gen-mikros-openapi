@@ -95,8 +95,10 @@ func parseOperationParameter(
 
 	if settings.Mikros.UseInboundMessages {
 		naming, err := mapping.NewFieldNaming(&mapping.FieldNamingOptions{
-			ProtoField:   field,
-			ProtoMessage: message,
+			FieldMappingContextOptions: &mapping.FieldMappingContextOptions{
+				ProtoField:   field,
+				ProtoMessage: message,
+			},
 		})
 		if err != nil {
 			return nil, err
