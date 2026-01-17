@@ -3,7 +3,7 @@ package openapi
 import (
 	"fmt"
 
-	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/converters"
+	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mapping"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
@@ -20,7 +20,7 @@ type Response struct {
 func parseOperationResponses(
 	method *protobuf.Method,
 	settings *settings.Settings,
-	converter *converters.Message,
+	converter *mapping.Message,
 ) map[string]*Response {
 	codes := getMethodResponseCodes(method)
 	if len(codes) == 0 {

@@ -5,10 +5,11 @@ import (
 	"path/filepath"
 
 	"github.com/bufbuild/protoplugin"
-	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/output"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/types/pluginpb"
+
+	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/log"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/args"
 	pcontext "github.com/mikros-dev/protoc-gen-mikros-openapi/internal/context"
@@ -58,8 +59,12 @@ func handleProtogenPlugin(plugin *protogen.Plugin, pluginArgs *args.Args) (strin
 		return "", "", nil
 	}
 
-	output.Enable(ctx.Settings.Debug)
-	output.Println("processing module:", ctx.Openapi.ModuleName())
+	logger := log.New(log.LoggerOptions{
+		Verbose: ctx.Settings.Debug,
+		Prefix:  "[mikros-openapi]",
+	})
+
+	logger.Println("processing module:", ctx.Openapi.ModuleName())
 
 	content, err := ctx.OutputOpenapi()
 	return content, filepath.Join(ctx.Settings.Output.Path, ctx.Openapi.ModuleName()), err

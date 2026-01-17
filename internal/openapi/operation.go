@@ -5,9 +5,10 @@ import (
 	"strings"
 
 	"github.com/iancoleman/strcase"
-	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/converters"
-	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mikros_extensions"
+
+	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mapping"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
+	mikros_extensions "github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf/extensions"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
@@ -35,7 +36,7 @@ type Operation struct {
 func parsePathItems(pkg *protobuf.Protobuf, settings *settings.Settings) (map[string]map[string]*Operation, error) {
 	var (
 		pathItems = make(map[string]map[string]*Operation)
-		converter = converters.NewMessage(converters.MessageOptions{
+		converter = mapping.NewMessage(mapping.MessageOptions{
 			Settings: settings.MikrosSettings,
 		})
 	)
@@ -67,14 +68,14 @@ func parseOperation(
 	method *protobuf.Method,
 	pkg *protobuf.Protobuf,
 	settings *settings.Settings,
-	converter *converters.Message,
+	converter *mapping.Message,
 ) (*Operation, error) {
 	googleAnnotations := mikros_extensions.LoadGoogleAnnotations(method.Proto)
 	if googleAnnotations == nil {
 		return nil, nil
 	}
 
-	endpoint, m := mikros_extensions.GetHttpEndpoint(googleAnnotations)
+	endpoint, m := mikros_extensions.GetHTTPEndpoint(googleAnnotations)
 	if settings.AddServiceNameInEndpoints {
 		endpoint = fmt.Sprintf("/%v%v", strcase.ToKebab(pkg.ModuleName), endpoint)
 	}

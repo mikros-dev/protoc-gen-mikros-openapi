@@ -4,8 +4,9 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mikros_extensions"
 	"google.golang.org/genproto/googleapis/api/annotations"
+
+	mikros_extensions "github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf/extensions"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 )

@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/converters"
-	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mikros_extensions"
-	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 	"google.golang.org/genproto/googleapis/api/annotations"
+
+	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mapping"
+	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
+	mikros_extensions "github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf/extensions"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
@@ -163,14 +164,17 @@ func collectRequestSchemas(
 		return err
 	}
 	if settings.Mikros.UseInboundMessages && !extensions.GetDisableInboundProcessing() {
-		reqSchemas = processInboundMessages(reqSchemas, settings)
+		reqSchemas, err = processInboundMessages(reqSchemas)
+		if err != nil {
+			return err
+		}
 	}
 
 	mergeSchemas(acc, reqSchemas, nil)
 	return nil
 }
 
-func processInboundMessages(schemas map[string]*Schema, settings *settings.Settings) map[string]*Schema {
+func processInboundMessages(schemas map[string]*Schema) (map[string]*Schema, error) {
 	for _, schema := range schemas {
 		if len(schema.Properties) == 0 {
 			continue
@@ -178,19 +182,22 @@ func processInboundMessages(schemas map[string]*Schema, settings *settings.Setti
 
 		properties := make(map[string]*Schema)
 		for _, property := range schema.Properties {
-			converter, _ := converters.NewField(converters.FieldOptions{
-				IsHTTPService: true,
-				ProtoField:    property.field,
-				ProtoMessage:  schema.Message,
-				Settings:      settings.MikrosSettings,
+			naming, err := mapping.NewFieldNaming(&mapping.FieldNamingOptions{
+				FieldMappingContextOptions: &mapping.FieldMappingContextOptions{
+					ProtoField:   property.field,
+					ProtoMessage: schema.Message,
+				},
 			})
+			if err != nil {
+				return nil, err
+			}
 
-			properties[converter.InboundName()] = property
+			properties[naming.Inbound()] = property
 		}
 		schema.Properties = properties
 	}
 
-	return schemas
+	return schemas, nil
 }
 
 // collectResponseSchemas parses, optionally processes outbound, renames when
@@ -210,8 +217,12 @@ func collectResponseSchemas(
 
 	var nameConv func(string) string
 	if settings.Mikros.UseOutboundMessages {
-		respSchemas = processOutboundMessages(respSchemas, settings)
-		converter := converters.NewMessage(converters.MessageOptions{
+		respSchemas, err = processOutboundMessages(respSchemas, settings)
+		if err != nil {
+			return err
+		}
+
+		converter := mapping.NewMessage(mapping.MessageOptions{
 			Settings: settings.MikrosSettings,
 		})
 
@@ -233,25 +244,27 @@ func mergeSchemas(dst, src map[string]*Schema, keyTransform func(string) string)
 	}
 }
 
-func processOutboundMessages(schemas map[string]*Schema, settings *settings.Settings) map[string]*Schema {
+func processOutboundMessages(schemas map[string]*Schema, settings *settings.Settings) (map[string]*Schema, error) {
 	for _, schema := range schemas {
 		if !schemaNeedsConversion(schema) {
 			continue
 		}
 
-		converter := converters.NewMessage(converters.MessageOptions{
+		converter := mapping.NewMessage(mapping.MessageOptions{
 			Settings: settings.MikrosSettings,
 		})
-
 		convertSchemaRef(schema, converter)
-		renameAndConvertProperties(schema, converter)
+
+		if err := renameAndConvertProperties(schema, converter); err != nil {
+			return nil, err
+		}
 	}
 
-	return schemas
+	return schemas, nil
 }
 
 // convertSchemaRef converts the top-level schema reference if present.
-func convertSchemaRef(schema *Schema, converter *converters.Message) {
+func convertSchemaRef(schema *Schema, converter *mapping.Message) {
 	if schema.Ref == "" {
 		return
 	}
@@ -260,30 +273,45 @@ func convertSchemaRef(schema *Schema, converter *converters.Message) {
 
 // renameAndConvertProperties rebuilds properties map with converted refs and
 // outbound JSON tag names.
-func renameAndConvertProperties(schema *Schema, converter *converters.Message) {
+func renameAndConvertProperties(schema *Schema, converter *mapping.Message) error {
 	if len(schema.Properties) == 0 {
-		return
+		return nil
 	}
 
 	properties := make(map[string]*Schema)
 	for _, property := range schema.Properties {
 		convertPropertyRefs(property, converter)
-
-		fieldConverter, _ := converters.NewField(converters.FieldOptions{
-			IsHTTPService: true,
-			ProtoField:    property.field,
-			ProtoMessage:  schema.Message,
+		naming, err := mapping.NewFieldNaming(&mapping.FieldNamingOptions{
+			FieldMappingContextOptions: &mapping.FieldMappingContextOptions{
+				ProtoField:   property.field,
+				ProtoMessage: schema.Message,
+			},
 		})
+		if err != nil {
+			return err
+		}
 
-		properties[fieldConverter.OutboundJsonTagFieldName()] = property
+		fieldTag, err := mapping.NewFieldTag(&mapping.FieldTagOptions{
+			FieldNaming:  naming,
+			FieldMappingContextOptions: &mapping.FieldMappingContextOptions{
+				ProtoField:   property.field,
+				ProtoMessage: schema.Message,
+			},
+		})
+		if err != nil {
+			return err
+		}
+
+		properties[fieldTag.OutboundTagFieldName()] = property
 	}
 
 	schema.Properties = properties
+	return nil
 }
 
 // convertPropertyRefs converts refs for property, its additionalProperties, and
 // items when present.
-func convertPropertyRefs(property *Schema, converter *converters.Message) {
+func convertPropertyRefs(property *Schema, converter *mapping.Message) {
 	if property.Ref != "" {
 		property.Ref = converter.WireOutputToOutbound(property.Ref)
 	}

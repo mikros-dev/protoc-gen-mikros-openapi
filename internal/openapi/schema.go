@@ -6,9 +6,10 @@ import (
 	"strings"
 
 	"github.com/juliangruber/go-intersect"
-	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mikros_extensions"
-	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 	"google.golang.org/protobuf/reflect/protoreflect"
+
+	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
+	mikros_extensions "github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf/extensions"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
@@ -320,7 +321,7 @@ func getMessageAdditionalSchema(
 		messages = m
 	}
 
-	// We expect this message to have no internal message fields, because
+	// We expect this message to have no internal message fields because
 	// we won't dive into them.
 	index := slices.IndexFunc(messages, func(msg *protobuf.Message) bool {
 		return msg.Name == trimPackageName(field.MapValueTypeName())

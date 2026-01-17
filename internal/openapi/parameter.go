@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/converters"
-	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mikros_extensions"
-	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
+	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mapping"
 	"google.golang.org/genproto/googleapis/api/annotations"
+
+	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
+	mikros_extensions "github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf/extensions"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
@@ -72,7 +73,7 @@ func findMethodRequestMessage(method *protobuf.Method, pkg *protobuf.Protobuf) (
 }
 
 func getEndpointInformation(httpRule *annotations.HttpRule) ([]string, string) {
-	endpoint, method := mikros_extensions.GetHttpEndpoint(httpRule)
+	endpoint, method := mikros_extensions.GetHTTPEndpoint(httpRule)
 	return mikros_extensions.RetrieveParameters(endpoint), method
 }
 
@@ -93,16 +94,15 @@ func parseOperationParameter(
 	)
 
 	if settings.Mikros.UseInboundMessages {
-		converter, err := converters.NewField(converters.FieldOptions{
-			IsHTTPService: true,
-			ProtoField:    field,
-			ProtoMessage:  message,
-			Settings:      settings.MikrosSettings,
+		naming, err := mapping.NewFieldNaming(&mapping.FieldNamingOptions{
+			ProtoField:   field,
+			ProtoMessage: message,
 		})
 		if err != nil {
 			return nil, err
 		}
-		name = converter.InboundName()
+
+		name = naming.Inbound()
 	}
 
 	if properties != nil {
