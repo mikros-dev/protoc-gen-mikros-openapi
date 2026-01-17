@@ -11,8 +11,8 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 	mikros_extensions "github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf/extensions"
 
-	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
 )
 
 var (
@@ -52,9 +52,9 @@ func newRefSchema(
 	field *protobuf.Field,
 	refDestination string,
 	pkg *protobuf.Protobuf,
-	settings *settings.Settings,
+	cfg *settings.Settings,
 ) *Schema {
-	schema := newSchemaFromProtobufField(field, pkg, settings)
+	schema := newSchemaFromProtobufField(field, pkg, cfg)
 
 	if schema.Type == SchemaTypeArray.String() {
 		schema.Items = &Schema{
@@ -70,7 +70,7 @@ func newRefSchema(
 	return schema
 }
 
-func newSchemaFromProtobufField(field *protobuf.Field, pkg *protobuf.Protobuf, settings *settings.Settings) *Schema {
+func newSchemaFromProtobufField(field *protobuf.Field, pkg *protobuf.Protobuf, cfg *settings.Settings) *Schema {
 	var (
 		properties = mikros_openapi.LoadFieldExtensions(field.Proto)
 		schema     = &Schema{
@@ -92,7 +92,7 @@ func newSchemaFromProtobufField(field *protobuf.Field, pkg *protobuf.Protobuf, s
 	}
 
 	if field.IsEnum() {
-		schema.Enum = getEnumValues(field, pkg, settings)
+		schema.Enum = getEnumValues(field, pkg, cfg)
 	}
 
 	// metadata
@@ -186,7 +186,7 @@ func schemaTypeFromMapType(mapType protoreflect.Kind) SchemaType {
 	return SchemaTypeInteger
 }
 
-func getEnumValues(field *protobuf.Field, pkg *protobuf.Protobuf, settings *settings.Settings) []string {
+func getEnumValues(field *protobuf.Field, pkg *protobuf.Protobuf, cfg *settings.Settings) []string {
 	var (
 		enums       []*protobuf.Enum
 		packageName = getPackageName(field.TypeName)
@@ -207,12 +207,12 @@ func getEnumValues(field *protobuf.Field, pkg *protobuf.Protobuf, settings *sett
 	})
 	if index != -1 {
 		var prefix string
-		if settings.Enum.RemovePrefix {
+		if cfg.Enum.RemovePrefix {
 			prefix = getEnumPrefix(enums[index])
 		}
 
 		for _, e := range enums[index].Values {
-			if settings.Enum.RemoveUnspecifiedEntry {
+			if cfg.Enum.RemoveUnspecifiedEntry {
 				if strings.HasSuffix(e.ProtoName, "_UNSPECIFIED") {
 					continue
 				}

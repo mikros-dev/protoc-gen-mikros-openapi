@@ -6,8 +6,8 @@ import (
 	"github.com/goccy/go-yaml"
 	"google.golang.org/protobuf/compiler/protogen"
 
-	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/openapi"
-	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
 )
 
 // Context holds the context for the OpenAPI generation. This structure is

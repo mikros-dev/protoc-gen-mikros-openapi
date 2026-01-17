@@ -15,7 +15,7 @@ import (
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/args"
 	pcontext "github.com/mikros-dev/protoc-gen-mikros-openapi/internal/context"
-	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
 )
 
 // Handle is the entry point for the plugin to be processed by protoc/buf.

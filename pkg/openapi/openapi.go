@@ -7,8 +7,8 @@ import (
 
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 
-	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
 )
 
 // Openapi describes the entire OpenAPI specification.

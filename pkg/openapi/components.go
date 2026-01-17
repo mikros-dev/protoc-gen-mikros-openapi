@@ -10,8 +10,8 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 	mikros_extensions "github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf/extensions"
 
-	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
 )
 
 // Components describes the components of the API.
@@ -156,14 +156,14 @@ func collectRequestSchemas(
 	methodExtensions *mikros_extensions.MikrosMethodExtensions,
 	extensions *mikros_openapi.OpenapiMethod,
 	httpCtx *methodHTTPContext,
-	settings *settings.Settings,
+	cfg *settings.Settings,
 	acc map[string]*Schema,
 ) error {
 	reqSchemas, err := parser.GetMessageSchemas(request, methodExtensions, httpCtx)
 	if err != nil {
 		return err
 	}
-	if settings.Mikros.UseInboundMessages && !extensions.GetDisableInboundProcessing() {
+	if cfg.Mikros.UseInboundMessages && !extensions.GetDisableInboundProcessing() {
 		reqSchemas, err = processInboundMessages(reqSchemas)
 		if err != nil {
 			return err
@@ -207,7 +207,7 @@ func collectResponseSchemas(
 	response *protobuf.Message,
 	methodExtensions *mikros_extensions.MikrosMethodExtensions,
 	httpCtx *methodHTTPContext,
-	settings *settings.Settings,
+	cfg *settings.Settings,
 	acc map[string]*Schema,
 ) error {
 	respSchemas, err := parser.GetMessageSchemas(response, methodExtensions, httpCtx)
@@ -216,14 +216,14 @@ func collectResponseSchemas(
 	}
 
 	var nameConv func(string) string
-	if settings.Mikros.UseOutboundMessages {
-		respSchemas, err = processOutboundMessages(respSchemas, settings)
+	if cfg.Mikros.UseOutboundMessages {
+		respSchemas, err = processOutboundMessages(respSchemas, cfg)
 		if err != nil {
 			return err
 		}
 
 		converter := mapping.NewMessage(mapping.MessageOptions{
-			Settings: settings.MikrosSettings,
+			Settings: cfg.MikrosSettings,
 		})
 
 		nameConv = converter.WireOutputToOutbound
@@ -244,14 +244,14 @@ func mergeSchemas(dst, src map[string]*Schema, keyTransform func(string) string)
 	}
 }
 
-func processOutboundMessages(schemas map[string]*Schema, settings *settings.Settings) (map[string]*Schema, error) {
+func processOutboundMessages(schemas map[string]*Schema, cfg *settings.Settings) (map[string]*Schema, error) {
 	for _, schema := range schemas {
 		if !schemaNeedsConversion(schema) {
 			continue
 		}
 
 		converter := mapping.NewMessage(mapping.MessageOptions{
-			Settings: settings.MikrosSettings,
+			Settings: cfg.MikrosSettings,
 		})
 		convertSchemaRef(schema, converter)
 

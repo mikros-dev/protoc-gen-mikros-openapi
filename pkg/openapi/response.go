@@ -6,8 +6,8 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mapping"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 
-	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
 )
 
 // Response describes a single response from an API Operation.
@@ -19,7 +19,7 @@ type Response struct {
 
 func parseOperationResponses(
 	method *protobuf.Method,
-	settings *settings.Settings,
+	cfg *settings.Settings,
 	converter *mapping.Message,
 ) map[string]*Response {
 	codes := getMethodResponseCodes(method)
@@ -30,10 +30,10 @@ func parseOperationResponses(
 	var (
 		responses = make(map[string]*Response)
 		name      = method.ResponseType.Name
-		errorName = settings.Error.DefaultName
+		errorName = cfg.Error.DefaultName
 	)
 
-	if settings.Mikros.UseOutboundMessages {
+	if cfg.Mikros.UseOutboundMessages {
 		name = converter.WireOutputToOutbound(name)
 	}
 

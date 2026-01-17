@@ -10,8 +10,8 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 	mikros_extensions "github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf/extensions"
 
-	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
 )
 
 // Parameter describes a single operation parameter.
@@ -27,7 +27,7 @@ func parseOperationParameters(
 	method *protobuf.Method,
 	httpRule *annotations.HttpRule,
 	pkg *protobuf.Protobuf,
-	settings *settings.Settings,
+	cfg *settings.Settings,
 ) ([]*Parameter, error) {
 	requestMessage, err := findMethodRequestMessage(method, pkg)
 	if err != nil {
@@ -44,7 +44,7 @@ func parseOperationParameters(
 	)
 
 	for _, field := range requestMessage.Fields {
-		parameter, err := parseOperationParameter(method, field, requestMessage, pathParameters, httpRule, settings)
+		parameter, err := parseOperationParameter(method, field, requestMessage, pathParameters, httpRule, cfg)
 		if err != nil {
 			return nil, err
 		}
@@ -83,7 +83,7 @@ func parseOperationParameter(
 	message *protobuf.Message,
 	pathParameters []string,
 	httpRule *annotations.HttpRule,
-	settings *settings.Settings,
+	cfg *settings.Settings,
 ) (*Parameter, error) {
 	var (
 		properties       = mikros_openapi.LoadFieldExtensions(field.Proto)
@@ -93,7 +93,7 @@ func parseOperationParameter(
 		description      string
 	)
 
-	if settings.Mikros.UseInboundMessages {
+	if cfg.Mikros.UseInboundMessages {
 		naming, err := mapping.NewFieldNaming(&mapping.FieldNamingOptions{
 			FieldMappingContextOptions: &mapping.FieldMappingContextOptions{
 				ProtoField:   field,

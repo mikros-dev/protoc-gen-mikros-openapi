@@ -10,8 +10,8 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 	mikros_extensions "github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf/extensions"
 
-	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
 )
 
 const (
@@ -33,16 +33,16 @@ type Operation struct {
 	endpoint string
 }
 
-func parsePathItems(pkg *protobuf.Protobuf, settings *settings.Settings) (map[string]map[string]*Operation, error) {
+func parsePathItems(pkg *protobuf.Protobuf, cfg *settings.Settings) (map[string]map[string]*Operation, error) {
 	var (
 		pathItems = make(map[string]map[string]*Operation)
 		converter = mapping.NewMessage(mapping.MessageOptions{
-			Settings: settings.MikrosSettings,
+			Settings: cfg.MikrosSettings,
 		})
 	)
 
 	for _, method := range pkg.Service.Methods {
-		operation, err := parseOperation(method, pkg, settings, converter)
+		operation, err := parseOperation(method, pkg, cfg, converter)
 		if err != nil {
 			return nil, err
 		}
@@ -67,7 +67,7 @@ func parsePathItems(pkg *protobuf.Protobuf, settings *settings.Settings) (map[st
 func parseOperation(
 	method *protobuf.Method,
 	pkg *protobuf.Protobuf,
-	settings *settings.Settings,
+	cfg *settings.Settings,
 	converter *mapping.Message,
 ) (*Operation, error) {
 	googleAnnotations := mikros_extensions.LoadGoogleAnnotations(method.Proto)
@@ -76,7 +76,7 @@ func parseOperation(
 	}
 
 	endpoint, m := mikros_extensions.GetHTTPEndpoint(googleAnnotations)
-	if settings.AddServiceNameInEndpoints {
+	if cfg.AddServiceNameInEndpoints {
 		endpoint = fmt.Sprintf("/%v%v", strcase.ToKebab(pkg.ModuleName), endpoint)
 	}
 
@@ -85,7 +85,7 @@ func parseOperation(
 		return nil, nil
 	}
 
-	parameters, err := parseOperationParameters(method, googleAnnotations, pkg, settings)
+	parameters, err := parseOperationParameters(method, googleAnnotations, pkg, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +98,7 @@ func parseOperation(
 		ID:              method.Name,
 		Tags:            extensions.GetTags(),
 		Parameters:      parameters,
-		Responses:       parseOperationResponses(method, settings, converter),
+		Responses:       parseOperationResponses(method, cfg, converter),
 		RequestBody:     parseRequestBody(method, m, pkg),
 		SecuritySchemes: parseOperationSecurity(pkg),
 	}, nil
