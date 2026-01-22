@@ -74,16 +74,19 @@ func getMethodComponentsSchemas(pkg *protobuf.Protobuf, cfg *settings.Settings) 
 			return nil, err
 		}
 
-		if err := collectRequestSchemas(
-			parser,
-			reqMsg,
-			methodExt,
-			ext,
-			httpCtx,
-			cfg,
-			schemas,
-		); err != nil {
-			return nil, err
+		// Request message schemas are collected only when the method has a body.
+		if httpRuleHasBody(httpCtx.httpRule) {
+			if err := collectRequestSchemas(
+				parser,
+				reqMsg,
+				methodExt,
+				ext,
+				httpCtx,
+				cfg,
+				schemas,
+			); err != nil {
+				return nil, err
+			}
 		}
 
 		if err := collectResponseSchemas(
@@ -147,6 +150,10 @@ func FindMessageByName(msgName string, pkg *protobuf.Protobuf) (*protobuf.Messag
 	}
 
 	return pkg.Messages[msgIndex], nil
+}
+
+func httpRuleHasBody(rule *annotations.HttpRule) bool {
+	return rule.GetBody() != "" || rule.GetPut() != "" || rule.GetPatch() != "" || rule.GetPost() != ""
 }
 
 // collectRequestSchemas parses, optionally processes inbound, and merges into accumulator.

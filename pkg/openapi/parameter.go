@@ -44,13 +44,13 @@ func parseOperationParameters(
 	)
 
 	for _, field := range requestMessage.Fields {
-		parameter, err := parseOperationParameter(method, field, requestMessage, pathParameters, httpRule, cfg)
+		parameter, err := parseOperationParameter(method, field, requestMessage, pathParameters, httpRule, pkg, cfg)
 		if err != nil {
 			return nil, err
 		}
 
 		if parameter.Location == "body" {
-			// Body parameters should go with its schema, at the components
+			// Body parameters should go with their schema, at the components
 			// section.
 			continue
 		}
@@ -83,6 +83,7 @@ func parseOperationParameter(
 	message *protobuf.Message,
 	pathParameters []string,
 	httpRule *annotations.HttpRule,
+	pkg *protobuf.Protobuf,
 	cfg *settings.Settings,
 ) (*Parameter, error) {
 	var (
@@ -116,7 +117,7 @@ func parseOperationParameter(
 		Location:    location,
 		Name:        name,
 		Description: description,
-		Schema:      getParameterSchema(properties, field),
+		Schema:      newSchemaFromProtobufField(field, pkg, cfg),
 	}, nil
 }
 
@@ -128,25 +129,4 @@ func getParameterMandatory(properties *mikros_openapi.Property, location string)
 	}
 
 	return location == "path"
-}
-
-func getParameterSchema(properties *mikros_openapi.Property, field *protobuf.Field) *Schema {
-	var (
-		example string
-		format  string
-	)
-
-	if properties != nil {
-		example = properties.GetExample()
-	}
-
-	if field.IsTimestamp() {
-		format = "date-time"
-	}
-
-	return &Schema{
-		Example: example,
-		Format:  format,
-		Type:    schemaTypeFromProtobufField(field).String(),
-	}
 }
