@@ -28,6 +28,7 @@ type Operation struct {
 	Responses       map[string]*Response  `yaml:"responses,omitempty"`
 	RequestBody     *RequestBody          `yaml:"requestBody,omitempty"`
 	SecuritySchemes []map[string][]string `yaml:"security,omitempty"`
+	ProtobufMethod  *protobuf.Method      `yaml:"-"`
 
 	method   string
 	endpoint string
@@ -101,5 +102,6 @@ func parseOperation(
 		Responses:       parseOperationResponses(method, cfg, converter),
 		RequestBody:     parseRequestBody(method, m, pkg),
 		SecuritySchemes: parseOperationSecurity(pkg),
+		ProtobufMethod:  method,
 	}, nil
 }

@@ -89,6 +89,8 @@ message OpenapiMethod {
   repeated string tags = 3;
   repeated Response response = 4;
   optional bool disable_inbound_processing = 5;
+
+  extensions 2000 to 5000;
 }
 
 message Response {
@@ -206,6 +208,8 @@ message Property {
   optional PropertyLocation location = 5;
   optional bool hide_from_schema = 6;
   optional string schema_name = 7;
+
+  extensions 2000 to 5000;
 }
 
 // Supported formats of a property.
