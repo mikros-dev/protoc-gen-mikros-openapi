@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mikros_extensions"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
+	mikros_extensions "github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf/extensions"
 
-	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
 )
 
 // MessageParser builds OpenAPI schemas from Protobuf messages.

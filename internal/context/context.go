@@ -1,14 +1,13 @@
 package context
 
 import (
-	"fmt"
+	"context"
 
 	"github.com/goccy/go-yaml"
 	"google.golang.org/protobuf/compiler/protogen"
 
-	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/args"
-	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/openapi"
-	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
 )
 
 // Context holds the context for the OpenAPI generation. This structure is
@@ -19,16 +18,9 @@ type Context struct {
 }
 
 // BuildContext builds the main context for the OpenAPI generation.
-func BuildContext(plugin *protogen.Plugin, pluginArgs *args.Args) (*Context, error) {
-	// Load Mikros-extensions Settings. It returns default values if no
-	// file is used.
-	cfg, err := settings.LoadSettings(pluginArgs.SettingsFilename)
-	if err != nil {
-		return nil, fmt.Errorf("could not load Settings file: %w", err)
-	}
-
+func BuildContext(ctx context.Context, plugin *protogen.Plugin, cfg *settings.Settings) (*Context, error) {
 	// Build the api-specific context
-	api, err := openapi.FromProto(plugin, cfg)
+	api, err := openapi.FromProto(ctx, plugin, cfg)
 	if err != nil {
 		return nil, err
 	}

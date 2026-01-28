@@ -18,6 +18,7 @@ type Settings struct {
 	Enum                      *Enum   `toml:"enum" default:"{}"`
 	Mikros                    *Mikros `toml:"mikros" default:"{}"`
 	Output                    *Output `toml:"output" default:"{}"`
+	Error                     *Error  `toml:"error" default:"{}"`
 
 	MikrosSettings *msettings.Settings
 }
@@ -25,9 +26,10 @@ type Settings struct {
 // Mikros contains all settings related to the protoc-gen-mikros-extensions
 // plugin.
 type Mikros struct {
-	UseOutboundMessages bool   `toml:"use_outbound_messages" default:"false"`
-	UseInboundMessages  bool   `toml:"use_inbound_messages" default:"false"`
-	SettingsFilename    string `toml:"settings_filename"`
+	UseOutboundMessages      bool   `toml:"use_outbound_messages" default:"false"`
+	UseInboundMessages       bool   `toml:"use_inbound_messages" default:"false"`
+	KeepMainModuleFilePrefix bool   `toml:"keep_main_module_file_prefix" default:"false"`
+	SettingsFilename         string `toml:"settings_filename"`
 }
 
 // Enum contains all settings related to how the plugin handles enums.
@@ -39,7 +41,20 @@ type Enum struct {
 // Output contains all settings related to the output directory of generated
 // OpenAPI files.
 type Output struct {
-	Path string `toml:"path" default:"openapi"`
+	UseDefaultOut bool   `toml:"use_default_out" default:"false"`
+	Path          string `toml:"path" default:"openapi"`
+	Filename      string `toml:"filename" default:"openapi.yaml"`
+}
+
+// Error contains settings for customizing the default error response.
+type Error struct {
+	DefaultName string                `toml:"default_name" default:"DefaultError"`
+	Fields      map[string]ErrorField `toml:"fields"`
+}
+
+// ErrorField defines the basic schema for an error property.
+type ErrorField struct {
+	Type string `toml:"type"`
 }
 
 // LoadSettings loads the settings from the given TOML file.
@@ -75,6 +90,7 @@ func LoadSettings(filename string) (*Settings, error) {
 	}
 	settings.MikrosSettings = cfg
 
+	settings.adjustValues()
 	return &settings, nil
 }
 
@@ -85,4 +101,17 @@ func loadDefaultSettings() (*Settings, error) {
 	}
 
 	return s, nil
+}
+
+func (s *Settings) adjustValues() {
+	// Set mikros defaults if no fields are provided
+	if len(s.Error.Fields) == 0 {
+		s.Error.Fields = map[string]ErrorField{
+			"code":         {Type: "integer"},
+			"service_name": {Type: "string"},
+			"message":      {Type: "string"},
+			"destination":  {Type: "string"},
+			"kind":         {Type: "string"},
+		}
+	}
 }

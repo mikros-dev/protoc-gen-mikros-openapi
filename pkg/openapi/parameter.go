@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/converters"
-	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mikros_extensions"
-	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
+	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mapping"
 	"google.golang.org/genproto/googleapis/api/annotations"
 
-	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/settings"
+	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
+	mikros_extensions "github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf/extensions"
+
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
 )
 
 // Parameter describes a single operation parameter.
@@ -26,7 +27,7 @@ func parseOperationParameters(
 	method *protobuf.Method,
 	httpRule *annotations.HttpRule,
 	pkg *protobuf.Protobuf,
-	settings *settings.Settings,
+	cfg *settings.Settings,
 ) ([]*Parameter, error) {
 	requestMessage, err := findMethodRequestMessage(method, pkg)
 	if err != nil {
@@ -43,13 +44,13 @@ func parseOperationParameters(
 	)
 
 	for _, field := range requestMessage.Fields {
-		parameter, err := parseOperationParameter(method, field, requestMessage, pathParameters, httpRule, settings)
+		parameter, err := parseOperationParameter(method, field, requestMessage, pathParameters, httpRule, pkg, cfg)
 		if err != nil {
 			return nil, err
 		}
 
 		if parameter.Location == "body" {
-			// Body parameters should go with its schema, at the components
+			// Body parameters should go with their schema, at the components
 			// section.
 			continue
 		}
@@ -72,7 +73,7 @@ func findMethodRequestMessage(method *protobuf.Method, pkg *protobuf.Protobuf) (
 }
 
 func getEndpointInformation(httpRule *annotations.HttpRule) ([]string, string) {
-	endpoint, method := mikros_extensions.GetHttpEndpoint(httpRule)
+	endpoint, method := mikros_extensions.GetHTTPEndpoint(httpRule)
 	return mikros_extensions.RetrieveParameters(endpoint), method
 }
 
@@ -82,7 +83,8 @@ func parseOperationParameter(
 	message *protobuf.Message,
 	pathParameters []string,
 	httpRule *annotations.HttpRule,
-	settings *settings.Settings,
+	pkg *protobuf.Protobuf,
+	cfg *settings.Settings,
 ) (*Parameter, error) {
 	var (
 		properties       = mikros_openapi.LoadFieldExtensions(field.Proto)
@@ -92,17 +94,18 @@ func parseOperationParameter(
 		description      string
 	)
 
-	if settings.Mikros.UseInboundMessages {
-		converter, err := converters.NewField(converters.FieldOptions{
-			IsHTTPService: true,
-			ProtoField:    field,
-			ProtoMessage:  message,
-			Settings:      settings.MikrosSettings,
+	if cfg.Mikros.UseInboundMessages {
+		naming, err := mapping.NewFieldNaming(&mapping.FieldNamingOptions{
+			FieldMappingContextOptions: &mapping.FieldMappingContextOptions{
+				ProtoField:   field,
+				ProtoMessage: message,
+			},
 		})
 		if err != nil {
 			return nil, err
 		}
-		name = converter.InboundName()
+
+		name = naming.Inbound()
 	}
 
 	if properties != nil {
@@ -114,7 +117,7 @@ func parseOperationParameter(
 		Location:    location,
 		Name:        name,
 		Description: description,
-		Schema:      getParameterSchema(properties, field),
+		Schema:      newSchemaFromProtobufField(field, pkg, cfg),
 	}, nil
 }
 
@@ -126,25 +129,4 @@ func getParameterMandatory(properties *mikros_openapi.Property, location string)
 	}
 
 	return location == "path"
-}
-
-func getParameterSchema(properties *mikros_openapi.Property, field *protobuf.Field) *Schema {
-	var (
-		example string
-		format  string
-	)
-
-	if properties != nil {
-		example = properties.GetExample()
-	}
-
-	if field.IsTimestamp() {
-		format = "date-time"
-	}
-
-	return &Schema{
-		Example: example,
-		Format:  format,
-		Type:    schemaTypeFromProtobufField(field).String(),
-	}
 }
