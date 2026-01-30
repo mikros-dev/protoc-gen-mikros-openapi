@@ -358,9 +358,7 @@ func getErrorComponentsSchemas(cfg *settings.Settings) map[string]*Schema {
 	properties := make(map[string]*Schema)
 
 	for name, field := range cfg.Error.Fields {
-		properties[name] = &Schema{
-			Type: field.Type,
-		}
+		properties[name] = schemaFromErrorField(field)
 	}
 
 	return map[string]*Schema{
@@ -369,6 +367,76 @@ func getErrorComponentsSchemas(cfg *settings.Settings) map[string]*Schema {
 			Properties: properties,
 		},
 	}
+}
+
+func schemaFromErrorField(f settings.ErrorField) *Schema {
+	// Ref-only schema if type is omitted
+	if f.Type == "" && f.Ref != "" {
+		return schemaRef(f.Ref)
+	}
+
+	if f.Type == SchemaTypeArray.String() {
+		return schemaFromErrorArrayField(f)
+	}
+
+	if f.Type == SchemaTypeObject.String() {
+		return schemaFromErrorObjectField(f)
+	}
+
+	return schemaFromErrorPrimitiveField(f)
+}
+
+func schemaRef(name string) *Schema {
+	return &Schema{Ref: refComponentsSchemas + name}
+}
+
+func schemaFromErrorArrayField(f settings.ErrorField) *Schema {
+	s := &Schema{Type: SchemaTypeArray.String()}
+
+	if f.Items != nil {
+		s.Items = schemaFromErrorField(*f.Items)
+		return s
+	}
+
+	if f.Ref != "" {
+		s.Items = schemaRef(f.Ref)
+		return s
+	}
+
+	// Emit array without items rather than panic.
+	s.Items = &Schema{}
+	return s
+}
+
+func schemaFromErrorObjectField(f settings.ErrorField) *Schema {
+	// Allow ref-only object schema when no inline definition is present.
+	if f.Ref != "" && len(f.Fields) == 0 && f.AdditionalProperties == nil {
+		return schemaRef(f.Ref)
+	}
+
+	s := &Schema{Type: SchemaTypeObject.String()}
+
+	if len(f.Fields) > 0 {
+		props := make(map[string]*Schema, len(f.Fields))
+		for name, child := range f.Fields {
+			props[name] = schemaFromErrorField(child)
+		}
+		s.Properties = props
+	}
+
+	if f.AdditionalProperties != nil {
+		s.AdditionalProperties = schemaFromErrorField(*f.AdditionalProperties)
+	}
+
+	return s
+}
+
+func schemaFromErrorPrimitiveField(f settings.ErrorField) *Schema {
+	if f.Ref != "" {
+		return schemaRef(f.Ref)
+	}
+
+	return &Schema{Type: f.Type}
 }
 
 func parseComponentsResponses(pkg *protobuf.Protobuf, cfg *settings.Settings) map[string]*Response {

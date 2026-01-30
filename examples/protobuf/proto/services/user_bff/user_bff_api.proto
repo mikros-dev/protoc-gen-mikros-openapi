@@ -191,6 +191,7 @@ message CreateUserRequest {
     schema_name: "entity.file"
   }];
   Example example = 10 [(openapi.property) = {hide_from_schema: false}];
+  map<string, string> example11 = 11;
 }
 
 message Example {

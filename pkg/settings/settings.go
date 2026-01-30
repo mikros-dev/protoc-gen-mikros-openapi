@@ -54,7 +54,11 @@ type Error struct {
 
 // ErrorField defines the basic schema for an error property.
 type ErrorField struct {
-	Type string `toml:"type"`
+	Type                 string                `toml:"type"` // string, integer, bool, array, object
+	Ref                  string                `toml:"ref"`
+	Items                *ErrorField           `toml:"items"`
+	Fields               map[string]ErrorField `toml:"fields"`
+	AdditionalProperties *ErrorField           `toml:"additional_properties"`
 }
 
 // LoadSettings loads the settings from the given TOML file.
