@@ -13,22 +13,3 @@ use_outbound_messages = true
 use_inbound_messages = true
 settings_filename = "protoc-gen-mikros-extensions.toml"
 keep_main_module_file_prefix = true
-
-[error]
-default_name = "MemedError"
-
-[error.fields.errors]
-type = "array"
-
-[error.fields.errors.items]
-type = "object"
-
-[error.fields.errors.items.fields.title]
-type = "string"
-
-[error.fields.errors.items.fields.detail]
-type = "string"
-
-[error.fields.errors.items.fields.metadata]
-type = "object"
-additional_properties = {}

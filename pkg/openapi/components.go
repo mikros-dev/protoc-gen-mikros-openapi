@@ -354,23 +354,142 @@ func schemaNeedsConversion(schema *Schema) bool {
 	return schema.Ref != "" || propertyRef
 }
 
+// getErrorComponentsSchemas will return the default error schema and any named
+// object schemas referenced from error fields.
 func getErrorComponentsSchemas(cfg *settings.Settings) map[string]*Schema {
-	properties := make(map[string]*Schema)
+	var (
+		schemas    = make(map[string]*Schema)
+		properties = make(map[string]*Schema)
+		visiting   = make(map[string]bool)
+	)
 
 	for name, field := range cfg.Error.Fields {
-		properties[name] = schemaFromErrorField(field)
+		properties[name] = buildErrorSchema(field, schemas, visiting)
 	}
 
-	return map[string]*Schema{
-		cfg.Error.DefaultName: {
-			Type:       SchemaTypeObject.String(),
-			Properties: properties,
-		},
+	schemas[cfg.Error.DefaultName] = &Schema{
+		Type:       SchemaTypeObject.String(),
+		Properties: properties,
 	}
+
+	return schemas
+}
+
+func buildErrorSchema(f settings.ErrorField, acc map[string]*Schema, visiting map[string]bool) *Schema {
+	if isRefOnlySchema(f) {
+		return schemaRef(f.Ref)
+	}
+
+	if f.Type == SchemaTypeArray.String() {
+		return buildErrorArraySchema(f, acc, visiting)
+	}
+
+	if f.Type == SchemaTypeObject.String() {
+		return buildErrorObjectSchema(f, acc, visiting)
+	}
+
+	return buildErrorPrimitiveSchema(f)
+}
+
+func isRefOnlySchema(f settings.ErrorField) bool {
+	return f.Type == "" && f.Ref != ""
+}
+
+func buildErrorArraySchema(f settings.ErrorField, acc map[string]*Schema, visiting map[string]bool) *Schema {
+	s := &Schema{Type: SchemaTypeArray.String()}
+
+	if f.Items != nil {
+		s.Items = buildErrorSchema(*f.Items, acc, visiting)
+		return s
+	}
+
+	if f.Ref != "" {
+		s.Items = schemaRef(f.Ref)
+		return s
+	}
+
+	// Emit array without items rather than panic.
+	s.Items = &Schema{}
+	return s
+}
+
+func buildErrorObjectSchema(f settings.ErrorField, acc map[string]*Schema, visiting map[string]bool) *Schema {
+	if isRefOnlyObject(f) {
+		return schemaRef(f.Ref)
+	}
+
+	if isNamedObjectDefinition(f) {
+		emitNamedObjectSchema(f, acc, visiting)
+		return schemaRef(f.Ref)
+	}
+
+	return buildInlineObjectSchema(f, acc, visiting)
+}
+
+func isRefOnlyObject(f settings.ErrorField) bool {
+	return f.Ref != "" && len(f.Fields) == 0 && f.AdditionalProperties == nil
+}
+
+func isNamedObjectDefinition(f settings.ErrorField) bool {
+	return f.Ref != "" && (len(f.Fields) > 0 || f.AdditionalProperties != nil)
+}
+
+func emitNamedObjectSchema(f settings.ErrorField, acc map[string]*Schema, visiting map[string]bool) {
+	// Prevent infinite recursion on self-references
+	if visiting[f.Ref] {
+		return
+	}
+
+	if _, ok := acc[f.Ref]; ok {
+		return
+	}
+
+	visiting[f.Ref] = true
+	acc[f.Ref] = buildInlineObjectSchema(f, acc, visiting)
+	visiting[f.Ref] = false
+}
+
+func buildInlineObjectSchema(
+	f settings.ErrorField,
+	acc map[string]*Schema,
+	visiting map[string]bool,
+) *Schema {
+	s := &Schema{Type: SchemaTypeObject.String()}
+
+	if len(f.Fields) > 0 {
+		s.Properties = buildErrorObjectProperties(f.Fields, acc, visiting)
+	}
+
+	if f.AdditionalProperties != nil {
+		s.AdditionalProperties = buildErrorSchema(*f.AdditionalProperties, acc, visiting)
+	}
+
+	return s
+}
+
+func buildErrorObjectProperties(
+	fields map[string]settings.ErrorField,
+	acc map[string]*Schema,
+	visiting map[string]bool,
+) map[string]*Schema {
+	props := make(map[string]*Schema, len(fields))
+	for name, child := range fields {
+		props[name] = buildErrorSchema(child, acc, visiting)
+	}
+
+	return props
+}
+
+func buildErrorPrimitiveSchema(f settings.ErrorField) *Schema {
+	if f.Ref != "" {
+		return schemaRef(f.Ref)
+	}
+
+	return &Schema{Type: f.Type}
 }
 
 func schemaFromErrorField(f settings.ErrorField) *Schema {
-	// Ref-only schema if type is omitted
+	// Ref-only schema if Type is omitted
 	if f.Type == "" && f.Ref != "" {
 		return schemaRef(f.Ref)
 	}
