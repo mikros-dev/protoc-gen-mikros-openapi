@@ -2,6 +2,7 @@ package openapi
 
 import (
 	"context"
+	"fmt"
 
 	"google.golang.org/protobuf/compiler/protogen"
 
@@ -47,6 +48,11 @@ func FromProto(_ context.Context, plugin *protogen.Plugin, cfg *settings.Setting
 		return nil, nil
 	}
 
+	info, err := parseInfo(pkg, cfg)
+	if err != nil {
+		return nil, err
+	}
+
 	pathItems, err := parsePathItems(pkg, cfg)
 	if err != nil {
 		return nil, err
@@ -59,7 +65,7 @@ func FromProto(_ context.Context, plugin *protogen.Plugin, cfg *settings.Setting
 
 	return &Openapi{
 		Version:    "3.0.0",
-		Info:       parseInfo(pkg, cfg),
+		Info:       info,
 		Servers:    parseServers(pkg, cfg),
 		PathItems:  pathItems,
 		Components: components,
@@ -71,7 +77,7 @@ func isHTTPService(pkg *protobuf.Protobuf) bool {
 	return pkg.Service != nil && pkg.Service.IsHTTP()
 }
 
-func parseInfo(pkg *protobuf.Protobuf, cfg *settings.Settings) *Info {
+func parseInfo(pkg *protobuf.Protobuf, cfg *settings.Settings) (*Info, error) {
 	var (
 		version        = "v0.1.0"
 		title          = pkg.ModuleName
@@ -83,7 +89,12 @@ func parseInfo(pkg *protobuf.Protobuf, cfg *settings.Settings) *Info {
 		mainModuleName = pkg.ModuleName + "_api"
 	}
 
-	metadata := mikros_openapi.LoadMetadata(pkg.PackageFiles[mainModuleName].Proto)
+	p, ok := pkg.PackageFiles[mainModuleName]
+	if !ok {
+		return nil, fmt.Errorf("could not find main module file '%s'", mainModuleName)
+	}
+
+	metadata := mikros_openapi.LoadMetadata(p.Proto)
 	if metadata != nil && metadata.GetInfo() != nil {
 		title = metadata.GetInfo().GetTitle()
 		description = metadata.GetInfo().GetDescription()
@@ -94,7 +105,7 @@ func parseInfo(pkg *protobuf.Protobuf, cfg *settings.Settings) *Info {
 		Title:       title,
 		Version:     version,
 		Description: description,
-	}
+	}, nil
 }
 
 func parseServers(pkg *protobuf.Protobuf, cfg *settings.Settings) []*Server {

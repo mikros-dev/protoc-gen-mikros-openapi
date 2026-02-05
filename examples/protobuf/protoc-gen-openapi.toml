@@ -12,3 +12,4 @@ path = "openapi"
 use_outbound_messages = true
 use_inbound_messages = true
 settings_filename = "protoc-gen-mikros-extensions.toml"
+keep_main_module_file_prefix = true
