@@ -10,7 +10,7 @@ require (
 	github.com/goccy/go-yaml v1.19.2
 	github.com/iancoleman/strcase v0.3.0
 	github.com/juliangruber/go-intersect v1.1.0
-	github.com/mikros-dev/protoc-gen-mikros-extensions v0.20.4-0.20260130130753-d09996251078
+	github.com/mikros-dev/protoc-gen-mikros-extensions v0.20.4-0.20260202103546-f2c78d74b207
 	google.golang.org/genproto/googleapis/api v0.0.0-20260128011058-8636f8732409
 	google.golang.org/protobuf v1.36.11
 )
