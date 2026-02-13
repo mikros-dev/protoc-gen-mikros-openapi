@@ -34,8 +34,18 @@ func Handle(
 	if err != nil {
 		return err
 	}
+	cfg, err := settings.LoadSettings(pluginArgs.SettingsFilename)
+	if err != nil {
+		return fmt.Errorf("could not load settings file: %w", err)
+	}
 
-	content, name, err := handleProtogenPlugin(ctx, plugin, pluginArgs)
+	logger := log.New(log.LoggerOptions{
+		Verbose: cfg.Debug,
+		Prefix:  "[mikros-openapi]",
+	})
+	ctx = ctxutil.WithLogger(ctx, logger)
+
+	content, name, err := handleProtogenPlugin(ctx, plugin, cfg)
 	if err != nil {
 		return err
 	}
@@ -48,22 +58,14 @@ func Handle(
 
 	if content != "" {
 		w.AddFile(name, content)
+		logger.Println("generated file:", name)
 	}
 
 	return nil
 }
 
-func handleProtogenPlugin(ctx context.Context, plugin *protogen.Plugin, pluginArgs *args.Args) (string, string, error) {
-	cfg, err := settings.LoadSettings(pluginArgs.SettingsFilename)
-	if err != nil {
-		return "", "", fmt.Errorf("could not load settings file: %w", err)
-	}
-
-	logger := log.New(log.LoggerOptions{
-		Verbose: cfg.Debug,
-		Prefix:  "[mikros-openapi]",
-	})
-	ctx = ctxutil.WithLogger(ctx, logger)
+func handleProtogenPlugin(ctx context.Context, plugin *protogen.Plugin, cfg *settings.Settings) (string, string, error) {
+	logger := ctxutil.LoggerFromContext(ctx)
 
 	// Build the context for the template generation
 	tplContext, err := pcontext.BuildContext(ctx, plugin, cfg)
