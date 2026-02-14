@@ -6,7 +6,7 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mapping"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 
-	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/openapi/lookup"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
 )
@@ -16,7 +16,7 @@ func parseOperationResponses(
 	cfg *settings.Settings,
 	converter *mapping.Message,
 ) map[string]*spec.Response {
-	codes := getMethodResponseCodes(method)
+	codes := lookup.LoadMethodResponseCodes(method)
 	if len(codes) == 0 {
 		return nil
 	}
@@ -52,16 +52,3 @@ func parseOperationResponses(
 	return responses
 }
 
-func getMethodResponseCodes(method *protobuf.Method) []*mikros_openapi.Response {
-	var (
-		codes []*mikros_openapi.Response
-	)
-
-	if extensions := mikros_openapi.LoadMethodExtensions(method.Proto); extensions != nil {
-		for _, c := range extensions.GetResponse() {
-			codes = append(codes, c)
-		}
-	}
-
-	return codes
-}

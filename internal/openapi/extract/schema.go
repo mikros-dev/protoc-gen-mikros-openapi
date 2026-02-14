@@ -165,30 +165,17 @@ func schemaTypeFromMapType(mapType protoreflect.Kind) spec.SchemaType {
 
 func getEnumValues(field *protobuf.Field, pkg *protobuf.Protobuf, cfg *settings.Settings) []string {
 	var (
-		enums       []*protobuf.Enum
-		packageName = lookup.GetPackageName(field.TypeName)
-		values      []string
+		values []string
 	)
 
-	if packageName == pkg.PackageName {
-		// Get values from local module enum
-		enums = pkg.Enums
-	}
-	if packageName != pkg.PackageName {
-		// Or look for them in foreign packages.
-		enums = lookup.LoadForeignEnums(field.TypeName, pkg)
-	}
-
-	index := slices.IndexFunc(enums, func(enum *protobuf.Enum) bool {
-		return enum.Name == lookup.TrimPackageName(field.TypeName)
-	})
-	if index != -1 {
+	enum := lookup.FindEnumByType(field.TypeName, pkg)
+	if enum != nil {
 		var prefix string
 		if cfg.Enum.RemovePrefix {
-			prefix = getEnumPrefix(enums[index])
+			prefix = getEnumPrefix(enum)
 		}
 
-		for _, e := range enums[index].Values {
+		for _, e := range enum.Values {
 			if cfg.Enum.RemoveUnspecifiedEntry {
 				if strings.HasSuffix(e.ProtoName, "_UNSPECIFIED") {
 					continue
@@ -263,30 +250,17 @@ func getMessageAdditionalSchema(
 }
 
 func getEnumAdditionalSchema(field *protobuf.Field, pkg *protobuf.Protobuf) *spec.Schema {
-	var (
-		packageName = lookup.GetPackageName(field.MapValueTypeName())
-		enums       []*protobuf.Enum
-		schema      = &spec.Schema{
-			Type: spec.SchemaTypeString.String(),
-		}
-	)
-
-	if packageName == pkg.PackageName {
-		// Get values from local module enum
-		enums = pkg.Enums
-	}
-	if packageName != pkg.PackageName {
-		// Or look for them in foreign packages.
-		enums = lookup.LoadForeignEnums(field.MapValueTypeName(), pkg)
+	schema := &spec.Schema{
+		Type: spec.SchemaTypeString.String(),
 	}
 
-	index := slices.IndexFunc(enums, func(enum *protobuf.Enum) bool {
-		return enum.Name == lookup.TrimPackageName(field.MapValueTypeName())
-	})
-	if index != -1 {
-		for _, e := range enums[index].Values {
-			schema.Enum = append(schema.Enum, e.ProtoName)
-		}
+	enum := lookup.FindEnumByType(field.MapValueTypeName(), pkg)
+	if enum == nil {
+		return schema
+	}
+
+	for _, e := range enum.Values {
+		schema.Enum = append(schema.Enum, e.ProtoName)
 	}
 
 	return schema

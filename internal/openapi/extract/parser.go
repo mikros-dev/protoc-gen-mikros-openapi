@@ -8,6 +8,8 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mapping"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 	mikros_extensions "github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf/extensions"
+
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/openapi/lookup"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
@@ -54,21 +56,16 @@ func (p *Parser) Do() (*spec.Openapi, error) {
 }
 
 func (p *Parser) parseInfo() (*spec.Info, error) {
+	f, err := lookup.FindMainModuleFile(p.pkg, p.cfg)
+	if err != nil {
+		return nil, err
+	}
+
 	var (
-		version        = "v0.1.0"
-		title          = p.pkg.ModuleName
-		mainModuleName = p.pkg.ModuleName
-		description    string
+		version     = "v0.1.0"
+		title       = p.pkg.ModuleName
+		description string
 	)
-
-	if p.cfg.Mikros.KeepMainModuleFilePrefix {
-		mainModuleName = p.pkg.ModuleName + "_api"
-	}
-
-	f, ok := p.pkg.PackageFiles[mainModuleName]
-	if !ok {
-		return nil, fmt.Errorf("could not find main module file '%s'", mainModuleName)
-	}
 
 	metadata := mikros_openapi.LoadMetadata(f.Proto)
 	if metadata != nil && metadata.GetInfo() != nil {
@@ -85,13 +82,13 @@ func (p *Parser) parseInfo() (*spec.Info, error) {
 }
 
 func (p *Parser) parseServers() []*spec.Server {
-	mainModuleName := p.pkg.ModuleName
-	if p.cfg.Mikros.KeepMainModuleFilePrefix {
-		mainModuleName = p.pkg.ModuleName + "_api"
+	f, err := lookup.FindMainModuleFile(p.pkg, p.cfg)
+	if err != nil {
+		return nil
 	}
 
 	var (
-		metadata = mikros_openapi.LoadMetadata(p.pkg.PackageFiles[mainModuleName].Proto)
+		metadata = mikros_openapi.LoadMetadata(f.Proto)
 		servers  []*spec.Server
 	)
 

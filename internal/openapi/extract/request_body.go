@@ -2,12 +2,12 @@ package extract
 
 import (
 	"net/http"
-	"slices"
 
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
-	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
 
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/openapi/lookup"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
 )
 
 func parseRequestBody(method *protobuf.Method, httpMethod string, pkg *protobuf.Protobuf) *spec.RequestBody {
@@ -24,7 +24,7 @@ func parseRequestBody(method *protobuf.Method, httpMethod string, pkg *protobuf.
 	if httpMethod == http.MethodPost {
 		required = true
 	}
-	if extensions := findRequestBodyMessageExtensions(pkg, method.RequestType.Name); extensions != nil {
+	if extensions := lookup.LoadMessageExtensionsByName(pkg, method.RequestType.Name); extensions != nil {
 		description = extensions.GetOperation().GetRequestBody().GetDescription()
 
 		switch extensions.GetOperation().GetRequestBody().GetType() {
@@ -46,15 +46,4 @@ func parseRequestBody(method *protobuf.Method, httpMethod string, pkg *protobuf.
 			},
 		},
 	}
-}
-
-func findRequestBodyMessageExtensions(pkg *protobuf.Protobuf, name string) *mikros_openapi.OpenapiMessage {
-	index := slices.IndexFunc(pkg.Messages, func(msg *protobuf.Message) bool {
-		return msg.Name == name
-	})
-	if index == -1 {
-		return nil
-	}
-
-	return mikros_openapi.LoadMessageExtensions(pkg.Messages[index].Proto)
 }

@@ -3,9 +3,9 @@ package extract
 import (
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 	mikros_extensions "github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf/extensions"
+
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/openapi/lookup"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
-
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
 )

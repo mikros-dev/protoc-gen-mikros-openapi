@@ -1,14 +1,14 @@
 package extract
 
 import (
-	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/openapi/lookup"
-	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
 	"google.golang.org/genproto/googleapis/api/annotations"
 
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mapping"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 	mikros_extensions "github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf/extensions"
 
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/openapi/lookup"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
 )
@@ -533,7 +533,7 @@ func parseComponentsResponses(pkg *protobuf.Protobuf, cfg *settings.Settings) ma
 }
 
 func parseMethodComponentsResponses(method *protobuf.Method, cfg *settings.Settings) []*spec.Response {
-	codes := getMethodResponseCodes(method)
+	codes := lookup.LoadMethodResponseCodes(method)
 	if len(codes) == 0 {
 		return nil
 	}
