@@ -48,28 +48,6 @@ type Schema struct {
 	field      *protobuf.Field
 }
 
-func newRefSchema(
-	field *protobuf.Field,
-	refDestination string,
-	pkg *protobuf.Protobuf,
-	cfg *settings.Settings,
-) *Schema {
-	schema := newSchemaFromProtobufField(field, pkg, cfg)
-
-	if schema.Type == SchemaTypeArray.String() {
-		schema.Items = &Schema{
-			Ref: refComponentsSchemas + refDestination,
-		}
-	}
-
-	if schema.Type != SchemaTypeArray.String() {
-		schema.Type = "" // Clears the type
-		schema.Ref = refComponentsSchemas + refDestination
-	}
-
-	return schema
-}
-
 func newSchemaFromProtobufField(field *protobuf.Field, pkg *protobuf.Protobuf, cfg *settings.Settings) *Schema {
 	var (
 		properties = mikros_openapi.LoadFieldExtensions(field.Proto)

@@ -11,7 +11,6 @@ import (
 	mikros_extensions "github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf/extensions"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
-	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
 )
 
 // Parameter describes a single operation parameter.
@@ -23,13 +22,11 @@ type Parameter struct {
 	Schema      *Schema `yaml:"schema,omitempty"`
 }
 
-func parseOperationParameters(
+func (p *Parser) parseOperationParameters(
 	method *protobuf.Method,
 	httpRule *annotations.HttpRule,
-	pkg *protobuf.Protobuf,
-	cfg *settings.Settings,
 ) ([]*Parameter, error) {
-	requestMessage, err := findMethodRequestMessage(method, pkg)
+	requestMessage, err := findMethodRequestMessage(method, p.pkg)
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +41,7 @@ func parseOperationParameters(
 	)
 
 	for _, field := range requestMessage.Fields {
-		parameter, err := parseOperationParameter(method, field, requestMessage, pathParameters, httpRule, pkg, cfg)
+		parameter, err := p.parseOperationParameter(method, field, requestMessage, pathParameters, httpRule)
 		if err != nil {
 			return nil, err
 		}
@@ -77,14 +74,12 @@ func getEndpointInformation(httpRule *annotations.HttpRule) ([]string, string) {
 	return mikros_extensions.RetrieveParameters(endpoint), method
 }
 
-func parseOperationParameter(
+func (p *Parser) parseOperationParameter(
 	method *protobuf.Method,
 	field *protobuf.Field,
 	message *protobuf.Message,
 	pathParameters []string,
 	httpRule *annotations.HttpRule,
-	pkg *protobuf.Protobuf,
-	cfg *settings.Settings,
 ) (*Parameter, error) {
 	var (
 		properties       = mikros_openapi.LoadFieldExtensions(field.Proto)
@@ -94,7 +89,7 @@ func parseOperationParameter(
 		description      string
 	)
 
-	if cfg.Mikros.UseInboundMessages {
+	if p.cfg.Mikros.UseInboundMessages {
 		naming, err := mapping.NewFieldNaming(&mapping.FieldNamingOptions{
 			FieldMappingContextOptions: &mapping.FieldMappingContextOptions{
 				ProtoField:   field,
@@ -117,7 +112,7 @@ func parseOperationParameter(
 		Location:    location,
 		Name:        name,
 		Description: description,
-		Schema:      newSchemaFromProtobufField(field, pkg, cfg),
+		Schema:      newSchemaFromProtobufField(field, p.pkg, p.cfg),
 	}, nil
 }
 

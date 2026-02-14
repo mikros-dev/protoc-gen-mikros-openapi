@@ -11,7 +11,6 @@ import (
 	mikros_extensions "github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf/extensions"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
-	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
 )
 
 const (
@@ -34,16 +33,16 @@ type Operation struct {
 	endpoint string
 }
 
-func parsePathItems(pkg *protobuf.Protobuf, cfg *settings.Settings) (map[string]map[string]*Operation, error) {
+func (p *Parser) parsePathItems() (map[string]map[string]*Operation, error) {
 	var (
 		pathItems = make(map[string]map[string]*Operation)
 		converter = mapping.NewMessage(mapping.MessageOptions{
-			Settings: cfg.MikrosSettings,
+			Settings: p.cfg.MikrosSettings,
 		})
 	)
 
-	for _, method := range pkg.Service.Methods {
-		operation, err := parseOperation(method, pkg, cfg, converter)
+	for _, method := range p.pkg.Service.Methods {
+		operation, err := p.parseOperation(method, converter)
 		if err != nil {
 			return nil, err
 		}
@@ -65,10 +64,8 @@ func parsePathItems(pkg *protobuf.Protobuf, cfg *settings.Settings) (map[string]
 	return pathItems, nil
 }
 
-func parseOperation(
+func (p *Parser) parseOperation(
 	method *protobuf.Method,
-	pkg *protobuf.Protobuf,
-	cfg *settings.Settings,
 	converter *mapping.Message,
 ) (*Operation, error) {
 	googleAnnotations := mikros_extensions.LoadGoogleAnnotations(method.Proto)
@@ -77,8 +74,8 @@ func parseOperation(
 	}
 
 	endpoint, m := mikros_extensions.GetHTTPEndpoint(googleAnnotations)
-	if cfg.AddServiceNameInEndpoints {
-		endpoint = fmt.Sprintf("/%v%v", strcase.ToKebab(pkg.ModuleName), endpoint)
+	if p.cfg.AddServiceNameInEndpoints {
+		endpoint = fmt.Sprintf("/%v%v", strcase.ToKebab(p.pkg.ModuleName), endpoint)
 	}
 
 	extensions := mikros_openapi.LoadMethodExtensions(method.Proto)
@@ -86,7 +83,7 @@ func parseOperation(
 		return nil, nil
 	}
 
-	parameters, err := parseOperationParameters(method, googleAnnotations, pkg, cfg)
+	parameters, err := p.parseOperationParameters(method, googleAnnotations)
 	if err != nil {
 		return nil, err
 	}
@@ -99,9 +96,9 @@ func parseOperation(
 		ID:              method.Name,
 		Tags:            extensions.GetTags(),
 		Parameters:      parameters,
-		Responses:       parseOperationResponses(method, cfg, converter),
-		RequestBody:     parseRequestBody(method, m, pkg),
-		SecuritySchemes: parseOperationSecurity(pkg),
+		Responses:       parseOperationResponses(method, p.cfg, converter),
+		RequestBody:     parseRequestBody(method, m, p.pkg),
+		SecuritySchemes: parseOperationSecurity(p.pkg),
 		ProtobufMethod:  method,
 	}, nil
 }

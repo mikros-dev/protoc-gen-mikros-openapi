@@ -14,30 +14,30 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
 )
 
-// Components describes the components of the API.
+// Components is a structure that describes the components of the API.
 type Components struct {
 	Schemas   map[string]*Schema   `yaml:"schemas"`
 	Responses map[string]*Response `yaml:"responses"`
 	Security  map[string]*Security `yaml:"securitySchemes,omitempty"`
 }
 
-func parseComponents(pkg *protobuf.Protobuf, cfg *settings.Settings) (*Components, error) {
-	schemas, err := parseComponentsSchemas(pkg, cfg)
+func (p *Parser) parseComponents() (*Components, error) {
+	schemas, err := p.parseComponentsSchemas()
 	if err != nil {
 		return nil, err
 	}
 
 	return &Components{
 		Schemas:   schemas,
-		Responses: parseComponentsResponses(pkg, cfg),
-		Security:  parseComponentsSecurity(pkg),
+		Responses: parseComponentsResponses(p.pkg, p.cfg),
+		Security:  parseComponentsSecurity(p.pkg),
 	}, nil
 }
 
-func parseComponentsSchemas(pkg *protobuf.Protobuf, cfg *settings.Settings) (map[string]*Schema, error) {
+func (p *Parser) parseComponentsSchemas() (map[string]*Schema, error) {
 	schemas := make(map[string]*Schema)
 
-	methodComponents, err := getMethodComponentsSchemas(pkg, cfg)
+	methodComponents, err := p.getMethodComponentsSchemas()
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func parseComponentsSchemas(pkg *protobuf.Protobuf, cfg *settings.Settings) (map
 		schemas[name] = schema
 	}
 
-	for name, schema := range getErrorComponentsSchemas(cfg) {
+	for name, schema := range getErrorComponentsSchemas(p.cfg) {
 		schemas[name] = schema
 	}
 
@@ -57,19 +57,19 @@ type methodHTTPContext struct {
 	pathParameters []string
 }
 
-func getMethodComponentsSchemas(pkg *protobuf.Protobuf, cfg *settings.Settings) (map[string]*Schema, error) {
+func (p *Parser) getMethodComponentsSchemas() (map[string]*Schema, error) {
 	var (
 		schemas = make(map[string]*Schema)
 		parser  = &MessageParser{
-			Package:  pkg,
-			Settings: cfg,
+			Package:  p.pkg,
+			Settings: p.cfg,
 		}
 	)
 
-	for _, method := range pkg.Service.Methods {
+	for _, method := range p.pkg.Service.Methods {
 		httpCtx, methodExt, ext := loadMethodContext(method)
 
-		reqMsg, respMsg, err := resolveReqRespMessages(method, pkg)
+		reqMsg, respMsg, err := resolveReqRespMessages(method, p.pkg)
 		if err != nil {
 			return nil, err
 		}
@@ -82,7 +82,7 @@ func getMethodComponentsSchemas(pkg *protobuf.Protobuf, cfg *settings.Settings) 
 				methodExt,
 				ext,
 				httpCtx,
-				cfg,
+				p.cfg,
 				schemas,
 			); err != nil {
 				return nil, err
@@ -94,7 +94,7 @@ func getMethodComponentsSchemas(pkg *protobuf.Protobuf, cfg *settings.Settings) 
 			respMsg,
 			methodExt,
 			httpCtx,
-			cfg,
+			p.cfg,
 			schemas,
 		); err != nil {
 			return nil, err
@@ -126,12 +126,12 @@ func resolveReqRespMessages(
 	method *protobuf.Method,
 	pkg *protobuf.Protobuf,
 ) (*protobuf.Message, *protobuf.Message, error) {
-	req, err := FindMessageByName(method.RequestType.Name, pkg)
+	req, err := findMessageByName(method.RequestType.Name, pkg)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	resp, err := FindMessageByName(method.ResponseType.Name, pkg)
+	resp, err := findMessageByName(method.ResponseType.Name, pkg)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -139,9 +139,7 @@ func resolveReqRespMessages(
 	return req, resp, nil
 }
 
-// FindMessageByName finds a message by its name inside the loaded protobuf
-// messages.
-func FindMessageByName(msgName string, pkg *protobuf.Protobuf) (*protobuf.Message, error) {
+func findMessageByName(msgName string, pkg *protobuf.Protobuf) (*protobuf.Message, error) {
 	msgIndex := slices.IndexFunc(pkg.Messages, func(msg *protobuf.Message) bool {
 		return msg.Name == msgName
 	})
@@ -408,7 +406,7 @@ func buildErrorArraySchema(f settings.ErrorField, acc map[string]*Schema, visiti
 		return s
 	}
 
-	// Emit array without items rather than panic.
+	// Emit an array without items rather than panic.
 	s.Items = &Schema{}
 	return s
 }
@@ -522,7 +520,7 @@ func schemaFromErrorArrayField(f settings.ErrorField) *Schema {
 		return s
 	}
 
-	// Emit array without items rather than panic.
+	// Emit an array without items rather than panic.
 	s.Items = &Schema{}
 	return s
 }
