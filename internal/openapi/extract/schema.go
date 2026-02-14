@@ -1,7 +1,6 @@
 package extract
 
 import (
-	"errors"
 	"slices"
 	"strings"
 
@@ -10,6 +9,7 @@ import (
 	mikros_extensions "github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf/extensions"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/openapi/lookup"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
@@ -40,7 +40,7 @@ func GetAdditionalPropertySchemas(
 
 	if field.MapValueTypeKind() == protoreflect.EnumKind {
 		return map[string]*spec.Schema{
-			trimPackageName(field.MapValueTypeName()): getEnumAdditionalSchema(field, parser.Package),
+			lookup.TrimPackageName(field.MapValueTypeName()): getEnumAdditionalSchema(field, parser.Package),
 		}, nil
 	}
 
@@ -141,7 +141,7 @@ func getMapSchema(field *protobuf.Field) *spec.Schema {
 
 	if field.MapValueTypeKind() == protoreflect.MessageKind || field.MapValueTypeKind() == protoreflect.EnumKind {
 		schema.Type = ""
-		schema.Ref = refComponentsSchemas + trimPackageName(field.MapValueTypeName())
+		schema.Ref = refComponentsSchemas + lookup.TrimPackageName(field.MapValueTypeName())
 	}
 
 	return schema
@@ -166,7 +166,7 @@ func schemaTypeFromMapType(mapType protoreflect.Kind) spec.SchemaType {
 func getEnumValues(field *protobuf.Field, pkg *protobuf.Protobuf, cfg *settings.Settings) []string {
 	var (
 		enums       []*protobuf.Enum
-		packageName = getPackageName(field.TypeName)
+		packageName = lookup.GetPackageName(field.TypeName)
 		values      []string
 	)
 
@@ -176,11 +176,11 @@ func getEnumValues(field *protobuf.Field, pkg *protobuf.Protobuf, cfg *settings.
 	}
 	if packageName != pkg.PackageName {
 		// Or look for them in foreign packages.
-		enums = loadForeignEnums(field.TypeName, pkg)
+		enums = lookup.LoadForeignEnums(field.TypeName, pkg)
 	}
 
 	index := slices.IndexFunc(enums, func(enum *protobuf.Enum) bool {
-		return enum.Name == trimPackageName(field.TypeName)
+		return enum.Name == lookup.TrimPackageName(field.TypeName)
 	})
 	if index != -1 {
 		var prefix string
@@ -200,23 +200,6 @@ func getEnumValues(field *protobuf.Field, pkg *protobuf.Protobuf, cfg *settings.
 	}
 
 	return values
-}
-
-func loadForeignEnums(enumType string, pkg *protobuf.Protobuf) []*protobuf.Enum {
-	var (
-		foreignPackage = getPackageName(enumType)
-		enums          []*protobuf.Enum
-	)
-
-	// Load foreign enums
-	for _, f := range pkg.Files {
-		if f.Proto.GetPackage() == foreignPackage {
-			enums = protobuf.ParseEnumsFromFile(f)
-			break
-		}
-	}
-
-	return enums
 }
 
 func getEnumPrefix(enum *protobuf.Enum) string {
@@ -251,7 +234,7 @@ func getMessageAdditionalSchema(
 	httpCtx *methodHTTPContext,
 ) (map[string]*spec.Schema, error) {
 	var (
-		packageName = getPackageName(field.MapValueTypeName())
+		packageName = lookup.GetPackageName(field.MapValueTypeName())
 		messages    []*protobuf.Message
 	)
 
@@ -260,7 +243,7 @@ func getMessageAdditionalSchema(
 	}
 	if packageName != parser.Package.PackageName {
 		// find foreign message
-		m, err := loadForeignMessages(field.MapValueTypeName(), parser.Package)
+		m, err := lookup.LoadForeignMessages(field.MapValueTypeName(), parser.Package)
 		if err != nil {
 			return nil, err
 		}
@@ -270,7 +253,7 @@ func getMessageAdditionalSchema(
 	// We expect this message to have no internal message fields because
 	// we won't dive into them.
 	index := slices.IndexFunc(messages, func(msg *protobuf.Message) bool {
-		return msg.Name == trimPackageName(field.MapValueTypeName())
+		return msg.Name == lookup.TrimPackageName(field.MapValueTypeName())
 	})
 	if index != -1 {
 		return parser.GetMessageSchemas(messages[index], methodExtensions, httpCtx)
@@ -279,28 +262,9 @@ func getMessageAdditionalSchema(
 	return nil, nil
 }
 
-func loadForeignMessages(msgType string, pkg *protobuf.Protobuf) ([]*protobuf.Message, error) {
-	var (
-		foreignPackage = getPackageName(msgType)
-		messages       []*protobuf.Message
-	)
-
-	// Load foreign messages
-	for _, f := range pkg.Files {
-		if f.Proto.GetPackage() == foreignPackage {
-			messages = protobuf.ParseMessagesFromFile(f, f.Proto.GetPackage())
-		}
-	}
-	if len(messages) == 0 {
-		return nil, errors.New("could not load foreign messages")
-	}
-
-	return messages, nil
-}
-
 func getEnumAdditionalSchema(field *protobuf.Field, pkg *protobuf.Protobuf) *spec.Schema {
 	var (
-		packageName = getPackageName(field.MapValueTypeName())
+		packageName = lookup.GetPackageName(field.MapValueTypeName())
 		enums       []*protobuf.Enum
 		schema      = &spec.Schema{
 			Type: spec.SchemaTypeString.String(),
@@ -313,11 +277,11 @@ func getEnumAdditionalSchema(field *protobuf.Field, pkg *protobuf.Protobuf) *spe
 	}
 	if packageName != pkg.PackageName {
 		// Or look for them in foreign packages.
-		enums = loadForeignEnums(field.MapValueTypeName(), pkg)
+		enums = lookup.LoadForeignEnums(field.MapValueTypeName(), pkg)
 	}
 
 	index := slices.IndexFunc(enums, func(enum *protobuf.Enum) bool {
-		return enum.Name == trimPackageName(field.MapValueTypeName())
+		return enum.Name == lookup.TrimPackageName(field.MapValueTypeName())
 	})
 	if index != -1 {
 		for _, e := range enums[index].Values {

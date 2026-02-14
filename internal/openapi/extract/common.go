@@ -16,11 +16,6 @@ func isSuccessCode(code *mikros_openapi.Response) bool {
 		code.GetCode() == mikros_openapi.ResponseCode_RESPONSE_CODE_CREATED
 }
 
-func getPackageName(msgType string) string {
-	parts := strings.Split(strings.TrimPrefix(msgType, "."), ".")
-	return strings.Join(parts[:len(parts)-1], ".")
-}
-
 func getFieldLocation(
 	properties *mikros_openapi.Property,
 	httpRule *annotations.HttpRule,
@@ -52,7 +47,3 @@ func getFieldLocation(
 	return "query"
 }
 
-func trimPackageName(name string) string {
-	parts := strings.Split(name, ".")
-	return parts[len(parts)-1]
-}

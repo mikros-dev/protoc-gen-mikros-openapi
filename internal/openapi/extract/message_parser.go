@@ -1,11 +1,9 @@
 package extract
 
 import (
-	"fmt"
-	"slices"
-
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 	mikros_extensions "github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf/extensions"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/openapi/lookup"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
@@ -120,7 +118,7 @@ func (m *MessageParser) handleChildField(
 		return false, err
 	}
 
-	ref := m.newRefSchema(field, trimPackageName(field.TypeName))
+	ref := m.newRefSchema(field, lookup.TrimPackageName(field.TypeName))
 	props[field.Name] = ref
 
 	return ref.IsRequired(), nil
@@ -132,7 +130,7 @@ func (m *MessageParser) collectChildSchemas(
 	httpCtx *methodHTTPContext,
 	schemas map[string]*spec.Schema,
 ) error {
-	if m.isMessageAlreadyParsed(trimPackageName(field.TypeName)) {
+	if m.isMessageAlreadyParsed(lookup.TrimPackageName(field.TypeName)) {
 		return nil
 	}
 
@@ -163,41 +161,14 @@ func (m *MessageParser) isMessageAlreadyParsed(name string) bool {
 
 func (m *MessageParser) resolveChildMessage(field *protobuf.Field) (*protobuf.Message, error) {
 	if field.IsMessageFromPackage() {
-		return findMessageByName(trimPackageName(field.TypeName), m.Package)
+		return lookup.FindMessageByName(lookup.TrimPackageName(field.TypeName), m.Package)
 	}
 
 	if field.IsMessage() {
-		return findForeignMessage(field.TypeName, m.Package)
+		return lookup.FindForeignMessage(field.TypeName, m.Package)
 	}
 
 	return nil, nil
-}
-
-func findForeignMessage(msgType string, pkg *protobuf.Protobuf) (*protobuf.Message, error) {
-	var (
-		foreignPackage = getPackageName(msgType)
-		messages       []*protobuf.Message
-	)
-
-	// Load foreign messages
-	for _, f := range pkg.Files {
-		if f.Proto.GetPackage() == foreignPackage {
-			messages = protobuf.ParseMessagesFromFile(f, f.Proto.GetPackage())
-		}
-	}
-	if len(messages) == 0 {
-		return nil, fmt.Errorf("could not load foreign messages")
-	}
-
-	// Search inside them
-	msgIndex := slices.IndexFunc(messages, func(msg *protobuf.Message) bool {
-		return msg.Name == trimPackageName(msgType)
-	})
-	if msgIndex == -1 {
-		return nil, fmt.Errorf("could not find foreign message '%s'", msgType)
-	}
-
-	return messages[msgIndex], nil
 }
 
 func (m *MessageParser) newRefSchema(

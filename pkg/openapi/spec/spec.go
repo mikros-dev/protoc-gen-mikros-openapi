@@ -13,7 +13,7 @@ type Openapi struct {
 	Components *Components                      `yaml:"components,omitempty"`
 
 	// private
-	ModuleName string
+	ModuleName string `yaml:"-"`
 }
 
 // Info describes the service.
@@ -42,8 +42,8 @@ type Operation struct {
 
 	// private
 	ProtobufMethod *protobuf.Method `yaml:"-"`
-	Method         string
-	Endpoint       string
+	Method         string `yaml:"-"`
+	Endpoint       string `yaml:"-"`
 }
 
 // Parameter describes a single operation parameter.
@@ -61,7 +61,7 @@ type Response struct {
 	Content     map[string]*Media `yaml:"content"`
 
 	// private
-	SchemaName string
+	SchemaName string `yaml:"-"`
 }
 
 // RequestBody describes a request body.
@@ -89,9 +89,9 @@ type Schema struct {
 
 	// private
 	Message    *protobuf.Message `yaml:"-"`
-	SchemaType SchemaType
-	Required   bool
-	Field      *protobuf.Field
+	SchemaType SchemaType `yaml:"-"`
+	Required   bool `yaml:"-"`
+	Field      *protobuf.Field `yaml:"-"`
 }
 
 // IsRequired returns true if the field is required.

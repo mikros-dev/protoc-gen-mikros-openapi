@@ -1,9 +1,7 @@
 package extract
 
 import (
-	"fmt"
-	"slices"
-
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/openapi/lookup"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
 	"google.golang.org/genproto/googleapis/api/annotations"
 
@@ -76,7 +74,7 @@ func loadMethodContext(method *protobuf.Method) (
 	httpRule := mikros_extensions.LoadGoogleAnnotations(method.Proto)
 	methodExtensions := mikros_extensions.LoadMethodExtensions(method.Proto)
 	extensions := mikros_openapi.LoadMethodExtensions(method.Proto)
-	pathParameters, _ := getEndpointInformation(httpRule)
+	pathParameters, _ := lookup.EndpointInformation(httpRule)
 
 	return &methodHTTPContext{
 		httpRule,
@@ -89,28 +87,17 @@ func resolveReqRespMessages(
 	method *protobuf.Method,
 	pkg *protobuf.Protobuf,
 ) (*protobuf.Message, *protobuf.Message, error) {
-	req, err := findMessageByName(method.RequestType.Name, pkg)
+	req, err := lookup.FindMessageByName(method.RequestType.Name, pkg)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	resp, err := findMessageByName(method.ResponseType.Name, pkg)
+	resp, err := lookup.FindMessageByName(method.ResponseType.Name, pkg)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	return req, resp, nil
-}
-
-func findMessageByName(msgName string, pkg *protobuf.Protobuf) (*protobuf.Message, error) {
-	msgIndex := slices.IndexFunc(pkg.Messages, func(msg *protobuf.Message) bool {
-		return msg.Name == msgName
-	})
-	if msgIndex == -1 {
-		return nil, fmt.Errorf("could not find message '%s'", msgName)
-	}
-
-	return pkg.Messages[msgIndex], nil
 }
 
 func httpRuleHasBody(rule *annotations.HttpRule) bool {

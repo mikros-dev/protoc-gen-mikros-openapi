@@ -1,24 +1,22 @@
 package extract
 
 import (
-	"fmt"
-	"slices"
-
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/openapi/lookup"
 	"google.golang.org/genproto/googleapis/api/annotations"
 
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 	mikros_extensions "github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf/extensions"
 
-	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mapping"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
 )
 
 func (p *Parser) parseOperationParameters(
 	method *protobuf.Method,
 	httpRule *annotations.HttpRule,
 ) ([]*spec.Parameter, error) {
-	requestMessage, err := findMethodRequestMessage(method, p.pkg)
+	requestMessage, err := lookup.FindMethodRequestMessage(method, p.pkg)
 	if err != nil {
 		return nil, err
 	}
@@ -29,7 +27,7 @@ func (p *Parser) parseOperationParameters(
 
 	var (
 		params            []*spec.Parameter
-		pathParameters, _ = getEndpointInformation(httpRule)
+		pathParameters, _ = lookup.EndpointInformation(httpRule)
 	)
 
 	for _, field := range requestMessage.Fields {
@@ -48,22 +46,6 @@ func (p *Parser) parseOperationParameters(
 	}
 
 	return params, nil
-}
-
-func findMethodRequestMessage(method *protobuf.Method, pkg *protobuf.Protobuf) (*protobuf.Message, error) {
-	msgIndex := slices.IndexFunc(pkg.Messages, func(msg *protobuf.Message) bool {
-		return msg.Name == method.RequestType.Name
-	})
-	if msgIndex == -1 {
-		return nil, fmt.Errorf("could not find method request message '%s'", method.RequestType.Name)
-	}
-
-	return pkg.Messages[msgIndex], nil
-}
-
-func getEndpointInformation(httpRule *annotations.HttpRule) ([]string, string) {
-	endpoint, method := mikros_extensions.GetHTTPEndpoint(httpRule)
-	return mikros_extensions.RetrieveParameters(endpoint), method
 }
 
 func (p *Parser) parseOperationParameter(
