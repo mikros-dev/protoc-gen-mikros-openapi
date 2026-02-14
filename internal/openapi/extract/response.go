@@ -33,7 +33,7 @@ func parseOperationResponses(
 
 	for _, code := range codes {
 		refName := refComponentsSchemas + errorName
-		if isSuccessCode(code) {
+		if lookup.IsSuccessCode(code) {
 			refName = refComponentsSchemas + name
 		}
 

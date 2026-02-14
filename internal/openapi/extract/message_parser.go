@@ -5,8 +5,8 @@ import (
 	mikros_extensions "github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf/extensions"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/openapi/lookup"
-	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
 )
 
@@ -197,7 +197,7 @@ func (m *MessageParser) shouldSkipNonBodyField(
 	httpCtx *methodHTTPContext,
 	fieldName, messageModule string,
 ) bool {
-	loc := getFieldLocation(ext, httpCtx.httpRule, methodExtensions, fieldName, httpCtx.pathParameters)
+	loc := lookup.FieldLocation(ext, httpCtx.httpRule, methodExtensions, fieldName, httpCtx.pathParameters)
 	return loc != "body" && m.Package.ModuleName == messageModule
 }
 

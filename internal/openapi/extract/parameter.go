@@ -58,7 +58,7 @@ func (p *Parser) parseOperationParameter(
 	var (
 		properties       = mikros_openapi.LoadFieldExtensions(field.Proto)
 		methodExtensions = mikros_extensions.LoadMethodExtensions(method.Proto)
-		location         = getFieldLocation(properties, httpRule, methodExtensions, field.Name, pathParameters)
+		location         = lookup.FieldLocation(properties, httpRule, methodExtensions, field.Name, pathParameters)
 		name             = field.Name
 		description      string
 	)

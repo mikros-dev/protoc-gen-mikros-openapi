@@ -1,22 +1,15 @@
-package extract
+package lookup
 
 import (
 	"slices"
 	"strings"
 
-	"google.golang.org/genproto/googleapis/api/annotations"
-
 	mikros_extensions "github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf/extensions"
-
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
+	"google.golang.org/genproto/googleapis/api/annotations"
 )
 
-func isSuccessCode(code *mikros_openapi.Response) bool {
-	return code.GetCode() == mikros_openapi.ResponseCode_RESPONSE_CODE_OK ||
-		code.GetCode() == mikros_openapi.ResponseCode_RESPONSE_CODE_CREATED
-}
-
-func getFieldLocation(
+func FieldLocation(
 	properties *mikros_openapi.Property,
 	httpRule *annotations.HttpRule,
 	methodExtensions *mikros_extensions.MikrosMethodExtensions,
@@ -46,4 +39,3 @@ func getFieldLocation(
 	// Field has no annotation
 	return "query"
 }
-

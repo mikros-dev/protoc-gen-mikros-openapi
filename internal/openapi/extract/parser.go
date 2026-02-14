@@ -15,6 +15,10 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
 )
 
+const (
+	refComponentsSchemas = "#/components/schemas/"
+)
+
 // Parser is the internal parser mechanism for translating a protobuf file
 // into an OpenAPI specification.
 type Parser struct {
@@ -144,7 +148,7 @@ func (p *Parser) parseOperation(
 		return nil, nil
 	}
 
-	endpoint, m := mikros_extensions.GetHTTPEndpoint(googleAnnotations)
+	endpoint, m := lookup.HTTPEndpoint(googleAnnotations)
 	if p.cfg.AddServiceNameInEndpoints {
 		endpoint = fmt.Sprintf("/%v%v", strcase.ToKebab(p.pkg.ModuleName), endpoint)
 	}
