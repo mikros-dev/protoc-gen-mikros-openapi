@@ -1,4 +1,4 @@
-package openapi
+package extract
 
 import (
 	"fmt"
@@ -7,28 +7,22 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
 )
-
-// Response describes a single response from an API Operation.
-type Response struct {
-	Description string            `yaml:"description,omitempty"`
-	Content     map[string]*Media `yaml:"content"`
-	schemaName  string
-}
 
 func parseOperationResponses(
 	method *protobuf.Method,
 	cfg *settings.Settings,
 	converter *mapping.Message,
-) map[string]*Response {
+) map[string]*spec.Response {
 	codes := getMethodResponseCodes(method)
 	if len(codes) == 0 {
 		return nil
 	}
 
 	var (
-		responses = make(map[string]*Response)
+		responses = make(map[string]*spec.Response)
 		name      = method.ResponseType.Name
 		errorName = cfg.Error.DefaultName
 	)
@@ -43,11 +37,11 @@ func parseOperationResponses(
 			refName = refComponentsSchemas + name
 		}
 
-		responses[fmt.Sprintf("%d", code.GetCode())] = &Response{
+		responses[fmt.Sprintf("%d", code.GetCode())] = &spec.Response{
 			Description: code.GetDescription(),
-			Content: map[string]*Media{
+			Content: map[string]*spec.Media{
 				"application/json": {
-					Schema: &Schema{
+					Schema: &spec.Schema{
 						Ref: refName,
 					},
 				},

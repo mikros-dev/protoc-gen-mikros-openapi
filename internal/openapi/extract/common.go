@@ -1,4 +1,4 @@
-package openapi
+package extract
 
 import (
 	"slices"
@@ -10,11 +10,6 @@ import (
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 )
-
-// Media describes a media type.
-type Media struct {
-	Schema *Schema `json:"schema,omitempty"`
-}
 
 func isSuccessCode(code *mikros_openapi.Response) bool {
 	return code.GetCode() == mikros_openapi.ResponseCode_RESPONSE_CODE_OK ||

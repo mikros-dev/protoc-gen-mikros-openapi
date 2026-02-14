@@ -1,4 +1,6 @@
-package openapi
+package spec
+
+// This should be private
 
 import (
 	descriptor "google.golang.org/protobuf/types/descriptorpb"
@@ -20,7 +22,7 @@ const (
 	SchemaTypeNumber
 )
 
-func schemaTypeFromProtobufField(field *protobuf.Field) SchemaType {
+func SchemaTypeFromProtobufField(field *protobuf.Field) SchemaType {
 	switch field.Type {
 	case descriptor.FieldDescriptorProto_TYPE_STRING:
 		return SchemaTypeString

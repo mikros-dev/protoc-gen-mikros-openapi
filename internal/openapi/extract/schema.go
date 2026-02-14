@@ -1,4 +1,4 @@
-package openapi
+package extract
 
 import (
 	"errors"
@@ -6,59 +6,58 @@ import (
 	"strings"
 
 	"github.com/juliangruber/go-intersect"
-	"google.golang.org/protobuf/reflect/protoreflect"
-
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 	mikros_extensions "github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf/extensions"
+	"google.golang.org/protobuf/reflect/protoreflect"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
 )
 
 var (
-	supportedSchemas = []SchemaType{
-		SchemaTypeString,
-		SchemaTypeInteger,
-		SchemaTypeNumber,
-		SchemaTypeBool,
-		SchemaTypeObject,
-		SchemaTypeArray,
+	supportedSchemas = []spec.SchemaType{
+		spec.SchemaTypeString,
+		spec.SchemaTypeInteger,
+		spec.SchemaTypeNumber,
+		spec.SchemaTypeBool,
+		spec.SchemaTypeObject,
+		spec.SchemaTypeArray,
 	}
 )
 
-// Schema represents a swagger schema of a field/parameter/object.
-type Schema struct {
-	Minimum              int                `yaml:"minimum,omitempty"`
-	Maximum              int                `yaml:"maximum,omitempty"`
-	Type                 string             `yaml:"type,omitempty"`
-	Format               string             `yaml:"format,omitempty"`
-	Ref                  string             `yaml:"$ref,omitempty"`
-	Description          string             `yaml:"description,omitempty"`
-	Example              string             `yaml:"example,omitempty"`
-	Items                *Schema            `yaml:"items,omitempty"`
-	Enum                 []string           `yaml:"enum,omitempty"`
-	RequiredProperties   []string           `yaml:"required,omitempty"`
-	Properties           map[string]*Schema `yaml:"properties,omitempty"`
-	AdditionalProperties *Schema            `yaml:"additionalProperties,omitempty"`
-	AnyOf                []*Schema          `yaml:"anyOf,omitempty"`
-	Message              *protobuf.Message  `yaml:"-"`
+// GetAdditionalPropertySchemas returns additional properties schemas for the
+// field.
+func GetAdditionalPropertySchemas(
+	field *protobuf.Field,
+	parser *MessageParser,
+	methodExtensions *mikros_extensions.MikrosMethodExtensions,
+	httpCtx *methodHTTPContext,
+) (map[string]*spec.Schema, error) {
+	if field.MapValueTypeKind() == protoreflect.MessageKind {
+		return getMessageAdditionalSchema(field, parser, methodExtensions, httpCtx)
+	}
 
-	schemaType SchemaType
-	required   bool
-	field      *protobuf.Field
+	if field.MapValueTypeKind() == protoreflect.EnumKind {
+		return map[string]*spec.Schema{
+			trimPackageName(field.MapValueTypeName()): getEnumAdditionalSchema(field, parser.Package),
+		}, nil
+	}
+
+	return nil, nil
 }
 
-func newSchemaFromProtobufField(field *protobuf.Field, pkg *protobuf.Protobuf, cfg *settings.Settings) *Schema {
+func newSchemaFromProtobufField(field *protobuf.Field, pkg *protobuf.Protobuf, cfg *settings.Settings) *spec.Schema {
 	var (
 		properties = mikros_openapi.LoadFieldExtensions(field.Proto)
-		schema     = &Schema{
-			Type:  schemaTypeFromProtobufField(field).String(),
-			field: field, // Saves the field to be used later.
+		schema     = &spec.Schema{
+			Type:  spec.SchemaTypeFromProtobufField(field).String(),
+			Field: field, // Saves the field to be used later.
 		}
 	)
 
 	if properties != nil {
-		schema.required = properties.GetRequired()
+		schema.Required = properties.GetRequired()
 		schema.Example = properties.GetExample()
 		schema.Description = properties.GetDescription()
 		schema.Format = protoFormatToSchemaFormat(properties.GetFormat())
@@ -75,15 +74,15 @@ func newSchemaFromProtobufField(field *protobuf.Field, pkg *protobuf.Protobuf, c
 
 	// metadata
 	if field.IsProtoStruct() {
-		schema.Type = SchemaTypeObject.String()
-		schema.AdditionalProperties = &Schema{}
+		schema.Type = spec.SchemaTypeObject.String()
+		schema.AdditionalProperties = &spec.Schema{}
 	}
 
 	// interface
 	if field.IsProtoValue() {
-		schema.Type = SchemaTypeObject.String()
+		schema.Type = spec.SchemaTypeObject.String()
 		for _, t := range supportedSchemas {
-			schema.AnyOf = append(schema.AnyOf, &Schema{
+			schema.AnyOf = append(schema.AnyOf, &spec.Schema{
 				Type: t.String(),
 			})
 		}
@@ -92,15 +91,15 @@ func newSchemaFromProtobufField(field *protobuf.Field, pkg *protobuf.Protobuf, c
 	if field.IsMap() {
 		// Map should always have keys as string, because JSON does not support
 		// other types as keys.
-		schema.Type = SchemaTypeObject.String()
+		schema.Type = spec.SchemaTypeObject.String()
 		schema.AdditionalProperties = getMapSchema(field)
 	}
 
 	if field.IsArray() {
-		schema.Type = SchemaTypeArray.String()
+		schema.Type = spec.SchemaTypeArray.String()
 		if schema.Items == nil {
-			schema.Items = &Schema{
-				Type: schemaTypeFromProtobufField(field).String(),
+			schema.Items = &spec.Schema{
+				Type: spec.SchemaTypeFromProtobufField(field).String(),
 			}
 		}
 	}
@@ -135,8 +134,8 @@ func protoFormatToSchemaFormat(format mikros_openapi.PropertyFormat) string {
 	}
 }
 
-func getMapSchema(field *protobuf.Field) *Schema {
-	schema := &Schema{
+func getMapSchema(field *protobuf.Field) *spec.Schema {
+	schema := &spec.Schema{
 		Type: schemaTypeFromMapType(field.MapValueTypeKind()).String(),
 	}
 
@@ -148,20 +147,20 @@ func getMapSchema(field *protobuf.Field) *Schema {
 	return schema
 }
 
-func schemaTypeFromMapType(mapType protoreflect.Kind) SchemaType {
+func schemaTypeFromMapType(mapType protoreflect.Kind) spec.SchemaType {
 	switch mapType {
 	case protoreflect.FloatKind, protoreflect.DoubleKind:
-		return SchemaTypeNumber
+		return spec.SchemaTypeNumber
 	case protoreflect.MessageKind:
-		return SchemaTypeObject
+		return spec.SchemaTypeObject
 	case protoreflect.EnumKind, protoreflect.StringKind, protoreflect.BytesKind:
-		return SchemaTypeString
+		return spec.SchemaTypeString
 	case protoreflect.BoolKind:
-		return SchemaTypeBool
+		return spec.SchemaTypeBool
 	default:
 	}
 
-	return SchemaTypeInteger
+	return spec.SchemaTypeInteger
 }
 
 func getEnumValues(field *protobuf.Field, pkg *protobuf.Protobuf, cfg *settings.Settings) []string {
@@ -245,43 +244,12 @@ func enumStringsIntersection(s1, s2 string) string {
 	return strings.Join(parts, "_") + "_"
 }
 
-// IsRequired returns true if the field is required.
-func (s *Schema) IsRequired() bool {
-	return s.required
-}
-
-// HasAdditionalProperties returns true if the field has additional properties.
-func (s *Schema) HasAdditionalProperties() bool {
-	return s.AdditionalProperties != nil && s.AdditionalProperties != &Schema{}
-}
-
-// GetAdditionalPropertySchemas returns additional properties schemas for the
-// field.
-func (s *Schema) GetAdditionalPropertySchemas(
-	field *protobuf.Field,
-	parser *MessageParser,
-	methodExtensions *mikros_extensions.MikrosMethodExtensions,
-	httpCtx *methodHTTPContext,
-) (map[string]*Schema, error) {
-	if field.MapValueTypeKind() == protoreflect.MessageKind {
-		return getMessageAdditionalSchema(field, parser, methodExtensions, httpCtx)
-	}
-
-	if field.MapValueTypeKind() == protoreflect.EnumKind {
-		return map[string]*Schema{
-			trimPackageName(field.MapValueTypeName()): getEnumAdditionalSchema(field, parser.Package),
-		}, nil
-	}
-
-	return nil, nil
-}
-
 func getMessageAdditionalSchema(
 	field *protobuf.Field,
 	parser *MessageParser,
 	methodExtensions *mikros_extensions.MikrosMethodExtensions,
 	httpCtx *methodHTTPContext,
-) (map[string]*Schema, error) {
+) (map[string]*spec.Schema, error) {
 	var (
 		packageName = getPackageName(field.MapValueTypeName())
 		messages    []*protobuf.Message
@@ -330,12 +298,12 @@ func loadForeignMessages(msgType string, pkg *protobuf.Protobuf) ([]*protobuf.Me
 	return messages, nil
 }
 
-func getEnumAdditionalSchema(field *protobuf.Field, pkg *protobuf.Protobuf) *Schema {
+func getEnumAdditionalSchema(field *protobuf.Field, pkg *protobuf.Protobuf) *spec.Schema {
 	var (
 		packageName = getPackageName(field.MapValueTypeName())
 		enums       []*protobuf.Enum
-		schema      = &Schema{
-			Type: SchemaTypeString.String(),
+		schema      = &spec.Schema{
+			Type: spec.SchemaTypeString.String(),
 		}
 	)
 
@@ -358,9 +326,4 @@ func getEnumAdditionalSchema(field *protobuf.Field, pkg *protobuf.Protobuf) *Sch
 	}
 
 	return schema
-}
-
-// ProtoField returns the protobuf field that this schema was generated from.
-func (s *Schema) ProtoField() *protobuf.Field {
-	return s.field
 }

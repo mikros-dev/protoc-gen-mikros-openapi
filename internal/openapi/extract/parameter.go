@@ -1,31 +1,23 @@
-package openapi
+package extract
 
 import (
 	"fmt"
 	"slices"
 
-	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mapping"
 	"google.golang.org/genproto/googleapis/api/annotations"
 
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 	mikros_extensions "github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf/extensions"
 
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
+	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mapping"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 )
-
-// Parameter describes a single operation parameter.
-type Parameter struct {
-	Required    bool    `yaml:"required"`
-	Location    string  `yaml:"in"`
-	Name        string  `yaml:"name"`
-	Description string  `yaml:"description,omitempty"`
-	Schema      *Schema `yaml:"schema,omitempty"`
-}
 
 func (p *Parser) parseOperationParameters(
 	method *protobuf.Method,
 	httpRule *annotations.HttpRule,
-) ([]*Parameter, error) {
+) ([]*spec.Parameter, error) {
 	requestMessage, err := findMethodRequestMessage(method, p.pkg)
 	if err != nil {
 		return nil, err
@@ -36,7 +28,7 @@ func (p *Parser) parseOperationParameters(
 	}
 
 	var (
-		params            []*Parameter
+		params            []*spec.Parameter
 		pathParameters, _ = getEndpointInformation(httpRule)
 	)
 
@@ -80,7 +72,7 @@ func (p *Parser) parseOperationParameter(
 	message *protobuf.Message,
 	pathParameters []string,
 	httpRule *annotations.HttpRule,
-) (*Parameter, error) {
+) (*spec.Parameter, error) {
 	var (
 		properties       = mikros_openapi.LoadFieldExtensions(field.Proto)
 		methodExtensions = mikros_extensions.LoadMethodExtensions(method.Proto)
@@ -107,7 +99,7 @@ func (p *Parser) parseOperationParameter(
 		description = properties.GetDescription()
 	}
 
-	return &Parameter{
+	return &spec.Parameter{
 		Required:    getParameterMandatory(properties, location),
 		Location:    location,
 		Name:        name,

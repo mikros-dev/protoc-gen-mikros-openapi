@@ -6,6 +6,7 @@ import (
 	"github.com/goccy/go-yaml"
 	"google.golang.org/protobuf/compiler/protogen"
 
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
 )
@@ -13,7 +14,7 @@ import (
 // Context holds the context for the OpenAPI generation. This structure is
 // available inside template files.
 type Context struct {
-	Openapi  *openapi.Openapi
+	Openapi  *spec.Openapi
 	Settings *settings.Settings
 }
 

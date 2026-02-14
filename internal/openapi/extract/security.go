@@ -1,17 +1,11 @@
-package openapi
+package extract
 
 import (
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 )
-
-// Security describes security schemes supported by the API.
-type Security struct {
-	Type         string `yaml:"type"`
-	Scheme       string `yaml:"scheme"`
-	BearerFormat string `yaml:"bearerFormat,omitempty"`
-}
 
 func parseOperationSecurity(pkg *protobuf.Protobuf) []map[string][]string {
 	if extensions := mikros_openapi.LoadServiceExtensions(pkg.Service.Proto); extensions != nil {
@@ -28,11 +22,11 @@ func parseOperationSecurity(pkg *protobuf.Protobuf) []map[string][]string {
 	return nil
 }
 
-func parseComponentsSecurity(pkg *protobuf.Protobuf) map[string]*Security {
+func parseComponentsSecurity(pkg *protobuf.Protobuf) map[string]*spec.Security {
 	if extensions := mikros_openapi.LoadServiceExtensions(pkg.Service.Proto); extensions != nil {
-		security := make(map[string]*Security)
+		security := make(map[string]*spec.Security)
 		for _, extension := range extensions {
-			security[extension.GetName()] = &Security{
+			security[extension.GetName()] = &spec.Security{
 				Type:         securityTypeToString(extension.GetType()),
 				Scheme:       securitySchemeToString(extension.GetScheme()),
 				BearerFormat: extension.GetBearerFormat(),

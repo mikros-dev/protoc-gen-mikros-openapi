@@ -1,4 +1,4 @@
-package openapi
+package extract
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 	mikros_extensions "github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf/extensions"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
@@ -24,10 +25,10 @@ func (m *MessageParser) GetMessageSchemas(
 	message *protobuf.Message,
 	methodExtensions *mikros_extensions.MikrosMethodExtensions,
 	httpCtx *methodHTTPContext,
-) (map[string]*Schema, error) {
+) (map[string]*spec.Schema, error) {
 	var (
-		schemas            = make(map[string]*Schema)
-		props              = make(map[string]*Schema)
+		schemas            = make(map[string]*spec.Schema)
+		props              = make(map[string]*spec.Schema)
 		requiredProperties []string
 	)
 
@@ -55,8 +56,8 @@ func (m *MessageParser) GetMessageSchemas(
 		}
 	}
 
-	schemas[message.Name] = &Schema{
-		Type:               SchemaTypeObject.String(),
+	schemas[message.Name] = &spec.Schema{
+		Type:               spec.SchemaTypeObject.String(),
 		Properties:         props,
 		RequiredProperties: requiredProperties,
 		Message:            message,
@@ -79,7 +80,7 @@ func (m *MessageParser) processField(
 	methodExtensions *mikros_extensions.MikrosMethodExtensions,
 	httpCtx *methodHTTPContext,
 	message *protobuf.Message,
-	schemas, props map[string]*Schema,
+	schemas, props map[string]*spec.Schema,
 ) (bool, error) {
 	if shouldHandleChildMessage(field) {
 		return m.handleChildField(field, methodExtensions, httpCtx, schemas, props)
@@ -113,7 +114,7 @@ func (m *MessageParser) handleChildField(
 	field *protobuf.Field,
 	methodExtensions *mikros_extensions.MikrosMethodExtensions,
 	httpCtx *methodHTTPContext,
-	schemas, props map[string]*Schema,
+	schemas, props map[string]*spec.Schema,
 ) (bool, error) {
 	if err := m.collectChildSchemas(field, methodExtensions, httpCtx, schemas); err != nil {
 		return false, err
@@ -129,7 +130,7 @@ func (m *MessageParser) collectChildSchemas(
 	field *protobuf.Field,
 	methodExtensions *mikros_extensions.MikrosMethodExtensions,
 	httpCtx *methodHTTPContext,
-	schemas map[string]*Schema,
+	schemas map[string]*spec.Schema,
 ) error {
 	if m.isMessageAlreadyParsed(trimPackageName(field.TypeName)) {
 		return nil
@@ -202,16 +203,16 @@ func findForeignMessage(msgType string, pkg *protobuf.Protobuf) (*protobuf.Messa
 func (m *MessageParser) newRefSchema(
 	field *protobuf.Field,
 	refDestination string,
-) *Schema {
+) *spec.Schema {
 	schema := newSchemaFromProtobufField(field, m.Package, m.Settings)
 
-	if schema.Type == SchemaTypeArray.String() {
-		schema.Items = &Schema{
+	if schema.Type == spec.SchemaTypeArray.String() {
+		schema.Items = &spec.Schema{
 			Ref: refComponentsSchemas + refDestination,
 		}
 	}
 
-	if schema.Type != SchemaTypeArray.String() {
+	if schema.Type != spec.SchemaTypeArray.String() {
 		schema.Type = "" // Clears the type
 		schema.Ref = refComponentsSchemas + refDestination
 	}
@@ -234,7 +235,7 @@ func (m *MessageParser) handleRegularField(
 	ext *mikros_openapi.Property,
 	methodExtensions *mikros_extensions.MikrosMethodExtensions,
 	httpCtx *methodHTTPContext,
-	schemas, props map[string]*Schema,
+	schemas, props map[string]*spec.Schema,
 ) (bool, error) {
 	name := overrideName(ext, field.Name)
 	fs := newSchemaFromProtobufField(field, m.Package, m.Settings)
@@ -244,7 +245,7 @@ func (m *MessageParser) handleRegularField(
 		return fs.IsRequired(), nil
 	}
 
-	additional, err := fs.GetAdditionalPropertySchemas(field, m, methodExtensions, httpCtx)
+	additional, err := GetAdditionalPropertySchemas(field, m, methodExtensions, httpCtx)
 	if err != nil {
 		return false, err
 	}
