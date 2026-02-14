@@ -24,21 +24,16 @@ func schemaTypeFromProtobufField(field *protobuf.Field) SchemaType {
 	switch field.Type {
 	case descriptor.FieldDescriptorProto_TYPE_STRING:
 		return SchemaTypeString
-
 	case descriptor.FieldDescriptorProto_TYPE_ENUM:
 		return SchemaTypeString
-
 	case descriptor.FieldDescriptorProto_TYPE_BOOL:
 		return SchemaTypeBool
-
 	case descriptor.FieldDescriptorProto_TYPE_DOUBLE, descriptor.FieldDescriptorProto_TYPE_FLOAT:
 		return SchemaTypeNumber
-
 	case descriptor.FieldDescriptorProto_TYPE_MESSAGE:
 		if field.IsTimestamp() {
 			return SchemaTypeString
 		}
-
 	default:
 		return SchemaTypeInteger
 	}
@@ -50,22 +45,16 @@ func (s SchemaType) String() string {
 	switch s {
 	case SchemaTypeInteger:
 		return "integer"
-
 	case SchemaTypeNumber:
 		return "number"
-
 	case SchemaTypeBool:
 		return "boolean"
-
 	case SchemaTypeObject:
 		return "object"
-
 	case SchemaTypeString:
 		return "string"
-
 	case SchemaTypeArray:
 		return "array"
-
 	default:
 	}
 

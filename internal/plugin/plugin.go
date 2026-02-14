@@ -64,7 +64,11 @@ func Handle(
 	return nil
 }
 
-func handleProtogenPlugin(ctx context.Context, plugin *protogen.Plugin, cfg *settings.Settings) (string, string, error) {
+func handleProtogenPlugin(
+	ctx context.Context,
+	plugin *protogen.Plugin,
+	cfg *settings.Settings,
+) (string, string, error) {
 	logger := ctxutil.LoggerFromContext(ctx)
 
 	// Build the context for the template generation

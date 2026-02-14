@@ -23,6 +23,11 @@ type Openapi struct {
 	moduleName string
 }
 
+// ModuleName returns the name of the module.
+func (o *Openapi) ModuleName() string {
+	return o.moduleName
+}
+
 // Info describes the service.
 type Info struct {
 	Title       string `yaml:"title"`
@@ -48,17 +53,22 @@ func FromProto(_ context.Context, plugin *protogen.Plugin, cfg *settings.Setting
 		return nil, nil
 	}
 
-	info, err := parseInfo(pkg, cfg)
+	parser := &Parser{
+		pkg: pkg,
+		cfg: cfg,
+	}
+
+	info, err := parser.parseInfo()
 	if err != nil {
 		return nil, err
 	}
 
-	pathItems, err := parsePathItems(pkg, cfg)
+	pathItems, err := parser.parsePathItems()
 	if err != nil {
 		return nil, err
 	}
 
-	components, err := parseComponents(pkg, cfg)
+	components, err := parser.parseComponents()
 	if err != nil {
 		return nil, err
 	}
@@ -66,35 +76,42 @@ func FromProto(_ context.Context, plugin *protogen.Plugin, cfg *settings.Setting
 	return &Openapi{
 		Version:    "3.0.0",
 		Info:       info,
-		Servers:    parseServers(pkg, cfg),
+		Servers:    parser.parseServers(),
 		PathItems:  pathItems,
 		Components: components,
 		moduleName: pkg.ModuleName,
 	}, nil
 }
 
+// Parser is the internal parser mechanism for translating a protobuf file
+// into an OpenAPI specification.
+type Parser struct {
+	pkg *protobuf.Protobuf
+	cfg *settings.Settings
+}
+
 func isHTTPService(pkg *protobuf.Protobuf) bool {
 	return pkg.Service != nil && pkg.Service.IsHTTP()
 }
 
-func parseInfo(pkg *protobuf.Protobuf, cfg *settings.Settings) (*Info, error) {
+func (p *Parser) parseInfo() (*Info, error) {
 	var (
 		version        = "v0.1.0"
-		title          = pkg.ModuleName
-		mainModuleName = pkg.ModuleName
+		title          = p.pkg.ModuleName
+		mainModuleName = p.pkg.ModuleName
 		description    string
 	)
 
-	if cfg.Mikros.KeepMainModuleFilePrefix {
-		mainModuleName = pkg.ModuleName + "_api"
+	if p.cfg.Mikros.KeepMainModuleFilePrefix {
+		mainModuleName = p.pkg.ModuleName + "_api"
 	}
 
-	p, ok := pkg.PackageFiles[mainModuleName]
+	f, ok := p.pkg.PackageFiles[mainModuleName]
 	if !ok {
 		return nil, fmt.Errorf("could not find main module file '%s'", mainModuleName)
 	}
 
-	metadata := mikros_openapi.LoadMetadata(p.Proto)
+	metadata := mikros_openapi.LoadMetadata(f.Proto)
 	if metadata != nil && metadata.GetInfo() != nil {
 		title = metadata.GetInfo().GetTitle()
 		description = metadata.GetInfo().GetDescription()
@@ -108,14 +125,14 @@ func parseInfo(pkg *protobuf.Protobuf, cfg *settings.Settings) (*Info, error) {
 	}, nil
 }
 
-func parseServers(pkg *protobuf.Protobuf, cfg *settings.Settings) []*Server {
-	mainModuleName := pkg.ModuleName
-	if cfg.Mikros.KeepMainModuleFilePrefix {
-		mainModuleName = pkg.ModuleName + "_api"
+func (p *Parser) parseServers() []*Server {
+	mainModuleName := p.pkg.ModuleName
+	if p.cfg.Mikros.KeepMainModuleFilePrefix {
+		mainModuleName = p.pkg.ModuleName + "_api"
 	}
 
 	var (
-		metadata = mikros_openapi.LoadMetadata(pkg.PackageFiles[mainModuleName].Proto)
+		metadata = mikros_openapi.LoadMetadata(p.pkg.PackageFiles[mainModuleName].Proto)
 		servers  []*Server
 	)
 
@@ -129,9 +146,4 @@ func parseServers(pkg *protobuf.Protobuf, cfg *settings.Settings) []*Server {
 	}
 
 	return servers
-}
-
-// ModuleName returns the name of the module.
-func (o *Openapi) ModuleName() string {
-	return o.moduleName
 }

@@ -119,7 +119,7 @@ func (m *MessageParser) handleChildField(
 		return false, err
 	}
 
-	ref := newRefSchema(field, trimPackageName(field.TypeName), m.Package, m.Settings)
+	ref := m.newRefSchema(field, trimPackageName(field.TypeName))
 	props[field.Name] = ref
 
 	return ref.IsRequired(), nil
@@ -162,7 +162,7 @@ func (m *MessageParser) isMessageAlreadyParsed(name string) bool {
 
 func (m *MessageParser) resolveChildMessage(field *protobuf.Field) (*protobuf.Message, error) {
 	if field.IsMessageFromPackage() {
-		return FindMessageByName(trimPackageName(field.TypeName), m.Package)
+		return findMessageByName(trimPackageName(field.TypeName), m.Package)
 	}
 
 	if field.IsMessage() {
@@ -197,6 +197,26 @@ func findForeignMessage(msgType string, pkg *protobuf.Protobuf) (*protobuf.Messa
 	}
 
 	return messages[msgIndex], nil
+}
+
+func (m *MessageParser) newRefSchema(
+	field *protobuf.Field,
+	refDestination string,
+) *Schema {
+	schema := newSchemaFromProtobufField(field, m.Package, m.Settings)
+
+	if schema.Type == SchemaTypeArray.String() {
+		schema.Items = &Schema{
+			Ref: refComponentsSchemas + refDestination,
+		}
+	}
+
+	if schema.Type != SchemaTypeArray.String() {
+		schema.Type = "" // Clears the type
+		schema.Ref = refComponentsSchemas + refDestination
+	}
+
+	return schema
 }
 
 func (m *MessageParser) shouldSkipNonBodyField(
