@@ -7,8 +7,6 @@ import (
 	"github.com/iancoleman/strcase"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mapping"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
-	mikros_extensions "github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf/extensions"
-
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/openapi/lookup"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
@@ -139,16 +137,13 @@ func (p *Parser) parsePathItems() (map[string]map[string]*spec.Operation, error)
 	return pathItems, nil
 }
 
-func (p *Parser) parseOperation(
-	method *protobuf.Method,
-	converter *mapping.Message,
-) (*spec.Operation, error) {
-	googleAnnotations := mikros_extensions.LoadGoogleAnnotations(method.Proto)
-	if googleAnnotations == nil {
+func (p *Parser) parseOperation(method *protobuf.Method, converter *mapping.Message) (*spec.Operation, error) {
+	httpRule := lookup.LoadHTTPRule(method)
+	if httpRule == nil {
 		return nil, nil
 	}
 
-	endpoint, m := lookup.HTTPEndpoint(googleAnnotations)
+	endpoint, m := lookup.HTTPEndpoint(httpRule)
 	if p.cfg.AddServiceNameInEndpoints {
 		endpoint = fmt.Sprintf("/%v%v", strcase.ToKebab(p.pkg.ModuleName), endpoint)
 	}
@@ -158,7 +153,7 @@ func (p *Parser) parseOperation(
 		return nil, nil
 	}
 
-	parameters, err := p.parseOperationParameters(method, googleAnnotations)
+	parameters, err := p.parseOperationParameters(method, httpRule)
 	if err != nil {
 		return nil, err
 	}

@@ -71,7 +71,7 @@ func loadMethodContext(method *protobuf.Method) (
 	*mikros_extensions.MikrosMethodExtensions,
 	*mikros_openapi.OpenapiMethod,
 ) {
-	httpRule := mikros_extensions.LoadGoogleAnnotations(method.Proto)
+	httpRule := lookup.LoadHTTPRule(method)
 	methodExtensions := mikros_extensions.LoadMethodExtensions(method.Proto)
 	extensions := mikros_openapi.LoadMethodExtensions(method.Proto)
 	pathParameters, _ := lookup.EndpointInformation(httpRule)
@@ -472,7 +472,7 @@ func parseMethodComponentsResponses(method *protobuf.Method, cfg *settings.Setti
 
 	var responses []*spec.Response
 	for _, code := range codes {
-		if lookup.IsSuccessCode(code) {
+		if lookup.IsSuccessResponseCode(code) {
 			continue
 		}
 
