@@ -42,3 +42,8 @@ func LoadMessageExtensionsByName(pkg *protobuf.Protobuf, name string) *mikros_op
 
 	return mikros_openapi.LoadMessageExtensions(message.Proto)
 }
+
+func IsSuccessResponseCode(code *mikros_openapi.Response) bool {
+	return code.GetCode() == mikros_openapi.ResponseCode_RESPONSE_CODE_OK ||
+		code.GetCode() == mikros_openapi.ResponseCode_RESPONSE_CODE_CREATED
+}
