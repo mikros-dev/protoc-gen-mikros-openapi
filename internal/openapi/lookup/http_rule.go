@@ -6,10 +6,18 @@ import (
 )
 
 func HTTPEndpoint(httpRule *annotations.HttpRule) (string, string) {
+	if httpRule == nil {
+		return "", ""
+	}
+
 	return mikros_extensions.GetHTTPEndpoint(httpRule)
 }
 
 func EndpointInformation(httpRule *annotations.HttpRule) ([]string, string) {
+	if httpRule == nil {
+		return nil, ""
+	}
+
 	endpoint, method := HTTPEndpoint(httpRule)
 	return mikros_extensions.RetrieveParameters(endpoint), method
 }

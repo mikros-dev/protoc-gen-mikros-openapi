@@ -4,9 +4,10 @@ import (
 	"slices"
 	"strings"
 
-	mikros_extensions "github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf/extensions"
-	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 	"google.golang.org/genproto/googleapis/api/annotations"
+	mikros_extensions "github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf/extensions"
+
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 )
 
 func FieldLocation(
@@ -26,7 +27,7 @@ func FieldLocation(
 		return "path"
 	}
 
-	if httpRule.GetBody() == "*" {
+	if httpRule != nil && httpRule.GetBody() == "*" {
 		return "body"
 	}
 

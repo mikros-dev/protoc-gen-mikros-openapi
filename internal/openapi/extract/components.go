@@ -101,6 +101,10 @@ func resolveReqRespMessages(
 }
 
 func httpRuleHasBody(rule *annotations.HttpRule) bool {
+	if rule == nil {
+		return false
+	}
+
 	return rule.GetBody() != "" || rule.GetPut() != "" || rule.GetPatch() != "" || rule.GetPost() != ""
 }
 
