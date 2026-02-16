@@ -8,6 +8,7 @@ import (
 	"google.golang.org/protobuf/compiler/protogen"
 )
 
+// FindMainModuleFile returns the main module file for the given protobuf package.
 func FindMainModuleFile(pkg *protobuf.Protobuf, cfg *settings.Settings) (*protogen.File, error) {
 	mainModuleName := pkg.ModuleName
 	if cfg.Mikros.KeepMainModuleFilePrefix {

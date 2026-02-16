@@ -11,6 +11,7 @@ import (
 	"google.golang.org/genproto/googleapis/api/annotations"
 )
 
+// LoadHTTPRule returns the HTTP rule for the given method.
 func LoadHTTPRule(method *protobuf.Method) *annotations.HttpRule {
 	if method == nil {
 		return nil
@@ -19,6 +20,7 @@ func LoadHTTPRule(method *protobuf.Method) *annotations.HttpRule {
 	return mikros_extensions.LoadGoogleAnnotations(method.Proto)
 }
 
+// HTTPEndpoint returns the endpoint and method for the given HTTP rule.
 func HTTPEndpoint(httpRule *annotations.HttpRule) (string, string) {
 	if httpRule == nil {
 		return "", ""
@@ -27,6 +29,7 @@ func HTTPEndpoint(httpRule *annotations.HttpRule) (string, string) {
 	return mikros_extensions.GetHTTPEndpoint(httpRule)
 }
 
+// EndpointInformation returns the path parameters and method for the given HTTP rule.
 func EndpointInformation(httpRule *annotations.HttpRule) ([]string, string) {
 	if httpRule == nil {
 		return nil, ""
@@ -36,6 +39,7 @@ func EndpointInformation(httpRule *annotations.HttpRule) ([]string, string) {
 	return mikros_extensions.RetrieveParameters(endpoint), method
 }
 
+// FieldLocation returns the location of the given field in a request.
 func FieldLocation(
 	properties *mikros_openapi.Property,
 	httpRule *annotations.HttpRule,

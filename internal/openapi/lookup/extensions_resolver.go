@@ -6,6 +6,8 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 )
 
+// LoadMethodResponseCodes returns the list of response codes defined for the
+// given method.
 func LoadMethodResponseCodes(method *protobuf.Method) []*mikros_openapi.Response {
 	if method == nil {
 		return nil
@@ -19,6 +21,8 @@ func LoadMethodResponseCodes(method *protobuf.Method) []*mikros_openapi.Response
 	return extensions.GetResponse()
 }
 
+// LoadServiceSecurityExtensions returns the list of security extensions defined for the
+// given service.
 func LoadServiceSecurityExtensions(pkg *protobuf.Protobuf) []*mikros_openapi.OpenapiServiceSecurity {
 	if pkg == nil {
 		return nil
@@ -30,6 +34,8 @@ func LoadServiceSecurityExtensions(pkg *protobuf.Protobuf) []*mikros_openapi.Ope
 	return mikros_openapi.LoadServiceExtensions(pkg.Service.Proto)
 }
 
+// LoadMessageExtensionsByName finds a message by its name and returns tits
+// protobuf extensions.
 func LoadMessageExtensionsByName(pkg *protobuf.Protobuf, name string) *mikros_openapi.OpenapiMessage {
 	if pkg == nil {
 		return nil
@@ -43,6 +49,8 @@ func LoadMessageExtensionsByName(pkg *protobuf.Protobuf, name string) *mikros_op
 	return mikros_openapi.LoadMessageExtensions(message.Proto)
 }
 
+// IsSuccessResponseCode returns true if the given response code is a success
+// code.
 func IsSuccessResponseCode(code *mikros_openapi.Response) bool {
 	return code.GetCode() == mikros_openapi.ResponseCode_RESPONSE_CODE_OK ||
 		code.GetCode() == mikros_openapi.ResponseCode_RESPONSE_CODE_CREATED
