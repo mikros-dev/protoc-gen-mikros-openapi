@@ -2,11 +2,13 @@ package extract
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mapping"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/openapi/lookup"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
 )
@@ -22,23 +24,23 @@ func parseOperationResponses(
 	}
 
 	var (
-		responses = make(map[string]*spec.Response)
-		name      = method.ResponseType.Name
-		errorName = cfg.Error.DefaultName
+		responses         = make(map[string]*spec.Response)
+		successSchemaName = method.ResponseType.Name
+		errorName         = cfg.Error.DefaultName
 	)
 
 	if cfg.Mikros.UseOutboundMessages {
-		name = converter.WireOutputToOutbound(name)
+		successSchemaName = converter.WireOutputToOutbound(successSchemaName)
 	}
 
-	for _, code := range codes {
+	for _, code := range mergedMethodResponses(method, cfg) {
 		refName := refComponentsSchemas + errorName
 		if lookup.IsSuccessResponseCode(code) {
-			refName = refComponentsSchemas + name
+			refName = refComponentsSchemas + successSchemaName
 		}
 
 		responses[fmt.Sprintf("%d", code.GetCode())] = &spec.Response{
-			Description: code.GetDescription(),
+			Description: responseDescriptionOrDefault(code),
 			Content: map[string]*spec.Media{
 				"application/json": {
 					Schema: &spec.Schema{
@@ -65,13 +67,8 @@ func parseComponentsResponses(pkg *protobuf.Protobuf, cfg *settings.Settings) ma
 }
 
 func parseMethodComponentsResponses(method *protobuf.Method, cfg *settings.Settings) []*spec.Response {
-	codes := lookup.LoadMethodResponseCodes(method)
-	if len(codes) == 0 {
-		return nil
-	}
-
 	var responses []*spec.Response
-	for _, code := range codes {
+	for _, code := range mergedMethodResponses(method, cfg) {
 		if lookup.IsSuccessResponseCode(code) {
 			continue
 		}
@@ -79,7 +76,7 @@ func parseMethodComponentsResponses(method *protobuf.Method, cfg *settings.Setti
 		errorName := cfg.Error.DefaultName
 		responses = append(responses, &spec.Response{
 			SchemaName:  errorName,
-			Description: "The default error response.",
+			Description: cfg.Error.DefaultDescription,
 			Content: map[string]*spec.Media{
 				"application/json": {
 					Schema: &spec.Schema{
@@ -91,4 +88,48 @@ func parseMethodComponentsResponses(method *protobuf.Method, cfg *settings.Setti
 	}
 
 	return responses
+}
+
+func mergedMethodResponses(method *protobuf.Method, cfg *settings.Settings) []*mikros_openapi.Response {
+	merged := make(map[mikros_openapi.ResponseCode]*mikros_openapi.Response)
+
+	for _, r := range cfg.Error.Responses {
+		code := mikros_openapi.ResponseCode(r.Code)
+		desc := r.Description
+		merged[code] = &mikros_openapi.Response{
+			Code:        &code,
+			Description: &desc,
+		}
+	}
+
+	for _, r := range lookup.LoadMethodResponseCodes(method) {
+		code := r.GetCode()
+		if code == mikros_openapi.ResponseCode_RESPONSE_CODE_UNSPECIFIED {
+			continue
+		}
+
+		merged[code] = r
+	}
+
+	codes := make([]int, 0, len(merged))
+	for code := range merged {
+		codes = append(codes, int(code))
+	}
+	sort.Ints(codes)
+
+	out := make([]*mikros_openapi.Response, 0, len(codes))
+	for _, code := range codes {
+		out = append(out, merged[mikros_openapi.ResponseCode(code)])
+	}
+
+	return out
+}
+
+func responseDescriptionOrDefault(code *mikros_openapi.Response) string {
+	if code.GetDescription() != "" {
+		return code.GetDescription()
+	}
+
+	// Response code with no description will have a default message.
+	return fmt.Sprintf("HTTP %d response", code.GetCode())
 }

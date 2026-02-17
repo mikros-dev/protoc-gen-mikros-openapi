@@ -48,8 +48,10 @@ type Output struct {
 
 // Error contains settings for customizing the default error response.
 type Error struct {
-	DefaultName string                `toml:"default_name" default:"DefaultError"`
-	Fields      map[string]ErrorField `toml:"fields"`
+	DefaultName        string                `toml:"default_name" default:"DefaultError"`
+	DefaultDescription string                `toml:"default_description" default:"The default error response."`
+	Fields             map[string]ErrorField `toml:"fields"`
+	Responses          []ErrorResponse       `toml:"responses"`
 }
 
 // ErrorField defines the basic schema for an error property.
@@ -59,6 +61,13 @@ type ErrorField struct {
 	Items                *ErrorField           `toml:"items"`
 	Fields               map[string]ErrorField `toml:"fields"`
 	AdditionalProperties *ErrorField           `toml:"additional_properties"`
+}
+
+// ErrorResponse defines a default error response code that all endpoints
+// will have.
+type ErrorResponse struct {
+	Code        int    `toml:"code"`
+	Description string `toml:"description"`
 }
 
 // LoadSettings loads the settings from the given TOML file.
@@ -116,6 +125,14 @@ func (s *Settings) adjustValues() {
 			"message":      {Type: "string"},
 			"destination":  {Type: "string"},
 			"kind":         {Type: "string"},
+		}
+	}
+
+	// Default error codes for all endpoints.
+	if len(s.Error.Responses) == 0 {
+		s.Error.Responses = []ErrorResponse{
+			{Code: 500, Description: "Internal Server Error"},
+			{Code: 400, Description: "Bad Request"},
 		}
 	}
 }

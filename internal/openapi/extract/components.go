@@ -204,7 +204,10 @@ func mergeSchemas(dst, src map[string]*spec.Schema, keyTransform func(string) st
 	}
 }
 
-func processOutboundMessages(schemas map[string]*spec.Schema, converter *mapping.Message) (map[string]*spec.Schema, error) {
+func processOutboundMessages(
+	schemas map[string]*spec.Schema,
+	converter *mapping.Message,
+) (map[string]*spec.Schema, error) {
 	for _, schema := range schemas {
 		if !schemaNeedsConversion(schema) {
 			continue
