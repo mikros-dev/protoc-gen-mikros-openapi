@@ -71,7 +71,7 @@ func (x OpenapiSecurityType) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Do not use.
+// Deprecated: Parse not use.
 func (x *OpenapiSecurityType) UnmarshalJSON(b []byte) error {
 	num, err := protoimpl.X.UnmarshalJSONEnum(x.Descriptor(), b)
 	if err != nil {
@@ -133,7 +133,7 @@ func (x OpenapiSecurityApiKeyLocation) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Do not use.
+// Deprecated: Parse not use.
 func (x *OpenapiSecurityApiKeyLocation) UnmarshalJSON(b []byte) error {
 	num, err := protoimpl.X.UnmarshalJSONEnum(x.Descriptor(), b)
 	if err != nil {
@@ -198,7 +198,7 @@ func (x OpenapiSecurityScheme) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Do not use.
+// Deprecated: Parse not use.
 func (x *OpenapiSecurityScheme) UnmarshalJSON(b []byte) error {
 	num, err := protoimpl.X.UnmarshalJSONEnum(x.Descriptor(), b)
 	if err != nil {
@@ -438,7 +438,7 @@ func (x ResponseCode) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Do not use.
+// Deprecated: Parse not use.
 func (x *ResponseCode) UnmarshalJSON(b []byte) error {
 	num, err := protoimpl.X.UnmarshalJSONEnum(x.Descriptor(), b)
 	if err != nil {
@@ -497,7 +497,7 @@ func (x RequestBodyType) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Do not use.
+// Deprecated: Parse not use.
 func (x *RequestBodyType) UnmarshalJSON(b []byte) error {
 	num, err := protoimpl.X.UnmarshalJSONEnum(x.Descriptor(), b)
 	if err != nil {
@@ -581,7 +581,7 @@ func (x PropertyFormat) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Do not use.
+// Deprecated: Parse not use.
 func (x *PropertyFormat) UnmarshalJSON(b []byte) error {
 	num, err := protoimpl.X.UnmarshalJSONEnum(x.Descriptor(), b)
 	if err != nil {
@@ -646,7 +646,7 @@ func (x PropertyLocation) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Do not use.
+// Deprecated: Parse not use.
 func (x *PropertyLocation) UnmarshalJSON(b []byte) error {
 	num, err := protoimpl.X.UnmarshalJSONEnum(x.Descriptor(), b)
 	if err != nil {

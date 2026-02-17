@@ -24,6 +24,7 @@ type Parser struct {
 	cfg *settings.Settings
 }
 
+// NewParser creates a new parser for the given protobuf package.
 func NewParser(pkg *protobuf.Protobuf, cfg *settings.Settings) *Parser {
 	return &Parser{
 		pkg: pkg,
@@ -31,7 +32,8 @@ func NewParser(pkg *protobuf.Protobuf, cfg *settings.Settings) *Parser {
 	}
 }
 
-func (p *Parser) Do() (*spec.Openapi, error) {
+// Parse parses the protobuf file into an OpenAPI specification.
+func (p *Parser) Parse() (*spec.Openapi, error) {
 	info, err := p.parseInfo()
 	if err != nil {
 		return nil, err

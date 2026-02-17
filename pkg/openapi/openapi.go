@@ -32,9 +32,8 @@ func FromProto(_ context.Context, plugin *protogen.Plugin, cfg *settings.Setting
 
 	// Create our parser to deal with the protobuf translation into the
 	// OpenAPI specification.
-	parser := extract.NewParser(pkg, cfg)
-
-	return parser.Do()
+	return extract.NewParser(pkg, cfg).
+		Parse()
 }
 
 func isHTTPService(pkg *protobuf.Protobuf) bool {

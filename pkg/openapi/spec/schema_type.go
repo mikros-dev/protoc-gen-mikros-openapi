@@ -22,6 +22,7 @@ const (
 	SchemaTypeNumber
 )
 
+// SchemaTypeFromProtobufField returns the schema type for the given protobuf field.
 func SchemaTypeFromProtobufField(field *protobuf.Field) SchemaType {
 	switch field.Type {
 	case descriptor.FieldDescriptorProto_TYPE_STRING:
