@@ -47,10 +47,15 @@ func (p *Parser) Do() (*spec.Openapi, error) {
 		return nil, err
 	}
 
+	servers, err := p.parseServers()
+	if err != nil {
+		return nil, err
+	}
+
 	return &spec.Openapi{
 		Version:    "3.0.0",
 		Info:       info,
-		Servers:    p.parseServers(),
+		Servers:    servers,
 		PathItems:  pathItems,
 		Components: components,
 		ModuleName: p.pkg.ModuleName,
@@ -83,10 +88,10 @@ func (p *Parser) parseInfo() (*spec.Info, error) {
 	}, nil
 }
 
-func (p *Parser) parseServers() []*spec.Server {
+func (p *Parser) parseServers() ([]*spec.Server, error) {
 	f, err := lookup.FindMainModuleFile(p.pkg, p.cfg)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	var (
@@ -103,7 +108,7 @@ func (p *Parser) parseServers() []*spec.Server {
 		}
 	}
 
-	return servers
+	return servers, nil
 }
 
 func (p *Parser) parsePathItems() (map[string]map[string]*spec.Operation, error) {
@@ -148,9 +153,23 @@ func (p *Parser) parseOperation(method *protobuf.Method, converter *mapping.Mess
 		endpoint = fmt.Sprintf("/%v%v", strcase.ToKebab(p.pkg.ModuleName), endpoint)
 	}
 
+	var (
+		summary     = method.Name
+		description = ""
+		tags        = []string{
+			p.pkg.ModuleName,
+		}
+	)
+
 	extensions := mikros_openapi.LoadMethodExtensions(method.Proto)
-	if extensions == nil {
-		return nil, nil
+	if extensions != nil {
+		if extensions.GetSummary() != "" {
+			summary = extensions.GetSummary()
+		}
+		if len(extensions.GetTags()) > 0 {
+			tags = extensions.GetTags()
+		}
+		description = extensions.GetDescription()
 	}
 
 	parameters, err := p.parseOperationParameters(method, httpRule)
@@ -161,10 +180,10 @@ func (p *Parser) parseOperation(method *protobuf.Method, converter *mapping.Mess
 	return &spec.Operation{
 		Method:          m,
 		Endpoint:        endpoint,
-		Summary:         extensions.GetSummary(),
-		Description:     extensions.GetDescription(),
+		Summary:         summary,
+		Description:     description,
 		ID:              method.Name,
-		Tags:            extensions.GetTags(),
+		Tags:            tags,
 		Parameters:      parameters,
 		Responses:       parseOperationResponses(method, p.cfg, converter),
 		RequestBody:     parseRequestBody(method, m, p.pkg),

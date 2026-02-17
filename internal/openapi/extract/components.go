@@ -121,10 +121,12 @@ func collectRequestSchemas(
 	if err != nil {
 		return err
 	}
-	if cfg.Mikros.UseInboundMessages && !extensions.GetDisableInboundProcessing() {
-		reqSchemas, err = processInboundMessages(reqSchemas)
-		if err != nil {
-			return err
+	if cfg.Mikros.UseInboundMessages {
+		if extensions != nil && !extensions.GetDisableInboundProcessing() {
+			reqSchemas, err = processInboundMessages(reqSchemas)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -175,14 +177,14 @@ func collectResponseSchemas(
 
 	var nameConv func(string) string
 	if cfg.Mikros.UseOutboundMessages {
-		respSchemas, err = processOutboundMessages(respSchemas, cfg)
-		if err != nil {
-			return err
-		}
-
 		converter := mapping.NewMessage(mapping.MessageOptions{
 			Settings: cfg.MikrosSettings,
 		})
+
+		respSchemas, err = processOutboundMessages(respSchemas, converter)
+		if err != nil {
+			return err
+		}
 
 		nameConv = converter.WireOutputToOutbound
 	}
@@ -202,15 +204,12 @@ func mergeSchemas(dst, src map[string]*spec.Schema, keyTransform func(string) st
 	}
 }
 
-func processOutboundMessages(schemas map[string]*spec.Schema, cfg *settings.Settings) (map[string]*spec.Schema, error) {
+func processOutboundMessages(schemas map[string]*spec.Schema, converter *mapping.Message) (map[string]*spec.Schema, error) {
 	for _, schema := range schemas {
 		if !schemaNeedsConversion(schema) {
 			continue
 		}
 
-		converter := mapping.NewMessage(mapping.MessageOptions{
-			Settings: cfg.MikrosSettings,
-		})
 		convertSchemaRef(schema, converter)
 
 		if err := renameAndConvertProperties(schema, converter); err != nil {
@@ -449,45 +448,4 @@ func schemaRef(name string) *spec.Schema {
 	return &spec.Schema{
 		Ref: refComponentsSchemas + name,
 	}
-}
-
-func parseComponentsResponses(pkg *protobuf.Protobuf, cfg *settings.Settings) map[string]*spec.Response {
-	responses := make(map[string]*spec.Response)
-
-	for _, method := range pkg.Service.Methods {
-		for _, response := range parseMethodComponentsResponses(method, cfg) {
-			responses[response.SchemaName] = response
-		}
-	}
-
-	return responses
-}
-
-func parseMethodComponentsResponses(method *protobuf.Method, cfg *settings.Settings) []*spec.Response {
-	codes := lookup.LoadMethodResponseCodes(method)
-	if len(codes) == 0 {
-		return nil
-	}
-
-	var responses []*spec.Response
-	for _, code := range codes {
-		if lookup.IsSuccessResponseCode(code) {
-			continue
-		}
-
-		errorName := cfg.Error.DefaultName
-		responses = append(responses, &spec.Response{
-			SchemaName:  errorName,
-			Description: "The default error response.",
-			Content: map[string]*spec.Media{
-				"application/json": {
-					Schema: &spec.Schema{
-						Ref: refComponentsSchemas + errorName,
-					},
-				},
-			},
-		})
-	}
-
-	return responses
 }

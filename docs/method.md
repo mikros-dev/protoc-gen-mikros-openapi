@@ -10,8 +10,8 @@ A method has the following options available:
 
 | Name                       | Type   | Modifier | Description                                                                        |
 |----------------------------|--------|----------|------------------------------------------------------------------------------------|
-| summary                    | string | required | A short summary of what the operation does.                                        |
-| description                | string | required | A verbose explanation of the operation behavior.                                   |
+| summary                    | string | optional | A short summary of what the operation does.                                        |
+| description                | string | optional | A verbose explanation of the operation behavior.                                   |
 | tags                       | string | array    | A list of tags for API documentation control.                                      |
 | [response](#response)      | object | array    | The list of possible responses as they are returned from executing this operation. |
 | disable_inbound_processing | bool   | optional | Disables post-processing names using mikros inbound settings for the messages.     |

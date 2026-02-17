@@ -51,3 +51,44 @@ func parseOperationResponses(
 
 	return responses
 }
+
+func parseComponentsResponses(pkg *protobuf.Protobuf, cfg *settings.Settings) map[string]*spec.Response {
+	responses := make(map[string]*spec.Response)
+
+	for _, method := range pkg.Service.Methods {
+		for _, response := range parseMethodComponentsResponses(method, cfg) {
+			responses[response.SchemaName] = response
+		}
+	}
+
+	return responses
+}
+
+func parseMethodComponentsResponses(method *protobuf.Method, cfg *settings.Settings) []*spec.Response {
+	codes := lookup.LoadMethodResponseCodes(method)
+	if len(codes) == 0 {
+		return nil
+	}
+
+	var responses []*spec.Response
+	for _, code := range codes {
+		if lookup.IsSuccessResponseCode(code) {
+			continue
+		}
+
+		errorName := cfg.Error.DefaultName
+		responses = append(responses, &spec.Response{
+			SchemaName:  errorName,
+			Description: "The default error response.",
+			Content: map[string]*spec.Media{
+				"application/json": {
+					Schema: &spec.Schema{
+						Ref: refComponentsSchemas + errorName,
+					},
+				},
+			},
+		})
+	}
+
+	return responses
+}
