@@ -52,6 +52,6 @@ func LoadMessageExtensionsByName(pkg *protobuf.Protobuf, name string) *mikros_op
 // IsSuccessResponseCode returns true if the given response code is a success
 // code.
 func IsSuccessResponseCode(code *mikros_openapi.Response) bool {
-	return code.GetCode() == mikros_openapi.ResponseCode_RESPONSE_CODE_OK ||
-		code.GetCode() == mikros_openapi.ResponseCode_RESPONSE_CODE_CREATED
+	c := int(code.GetCode())
+	return c >= 200 && c < 300
 }

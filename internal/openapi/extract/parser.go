@@ -145,6 +145,8 @@ func (p *Parser) parsePathItems() (map[string]map[string]*spec.Operation, error)
 func (p *Parser) parseOperation(method *protobuf.Method, converter *mapping.Message) (*spec.Operation, error) {
 	httpRule := lookup.LoadHTTPRule(method)
 	if httpRule == nil {
+		// The endpoint settings of an RPC are mandatory. It does not make
+		// sense to continue if they are not defined.
 		return nil, nil
 	}
 

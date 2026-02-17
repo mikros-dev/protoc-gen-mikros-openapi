@@ -13,12 +13,13 @@ import (
 // Settings contains all settings for the plugin read from the plugin TOML
 // file.
 type Settings struct {
-	Debug                     bool    `toml:"debug" default:"false"`
-	AddServiceNameInEndpoints bool    `toml:"add_service_name_in_endpoints" default:"false"`
-	Enum                      *Enum   `toml:"enum" default:"{}"`
-	Mikros                    *Mikros `toml:"mikros" default:"{}"`
-	Output                    *Output `toml:"output" default:"{}"`
-	Error                     *Error  `toml:"error" default:"{}"`
+	Debug                     bool       `toml:"debug" default:"false"`
+	AddServiceNameInEndpoints bool       `toml:"add_service_name_in_endpoints" default:"false"`
+	Enum                      *Enum      `toml:"enum" default:"{}"`
+	Mikros                    *Mikros    `toml:"mikros" default:"{}"`
+	Output                    *Output    `toml:"output" default:"{}"`
+	Error                     *Error     `toml:"error" default:"{}"`
+	Operation                 *Operation `toml:"operation" default:"{}"`
 
 	MikrosSettings *msettings.Settings
 }
@@ -68,6 +69,13 @@ type ErrorField struct {
 type ErrorResponse struct {
 	Code        int    `toml:"code"`
 	Description string `toml:"description"`
+}
+
+// Operation contains settings for customizing behavior of all generated
+// endpoints.
+type Operation struct {
+	DefaultSuccessCode        int    `toml:"default_success_code" default:"200"`
+	DefaultSuccessDescription string `toml:"default_success_description" default:"OK"`
 }
 
 // LoadSettings loads the settings from the given TOML file.

@@ -18,11 +18,6 @@ func parseOperationResponses(
 	cfg *settings.Settings,
 	converter *mapping.Message,
 ) map[string]*spec.Response {
-	codes := lookup.LoadMethodResponseCodes(method)
-	if len(codes) == 0 {
-		return nil
-	}
-
 	var (
 		responses         = make(map[string]*spec.Response)
 		successSchemaName = method.ResponseType.Name
@@ -51,12 +46,24 @@ func parseOperationResponses(
 		}
 	}
 
+	if len(responses) == 0 {
+		return nil
+	}
+
 	return responses
+}
+
+func responseDescriptionOrDefault(code *mikros_openapi.Response) string {
+	if code.GetDescription() != "" {
+		return code.GetDescription()
+	}
+
+	// Response code with no description will have a default message.
+	return fmt.Sprintf("HTTP %d response", code.GetCode())
 }
 
 func parseComponentsResponses(pkg *protobuf.Protobuf, cfg *settings.Settings) map[string]*spec.Response {
 	responses := make(map[string]*spec.Response)
-
 	for _, method := range pkg.Service.Methods {
 		for _, response := range parseMethodComponentsResponses(method, cfg) {
 			responses[response.SchemaName] = response
@@ -93,6 +100,14 @@ func parseMethodComponentsResponses(method *protobuf.Method, cfg *settings.Setti
 func mergedMethodResponses(method *protobuf.Method, cfg *settings.Settings) []*mikros_openapi.Response {
 	merged := make(map[mikros_openapi.ResponseCode]*mikros_openapi.Response)
 
+	// Add the default success response
+	successCode := mikros_openapi.ResponseCode(cfg.Operation.DefaultSuccessCode)
+	merged[successCode] = &mikros_openapi.Response{
+		Code:        &successCode,
+		Description: &cfg.Operation.DefaultSuccessDescription,
+	}
+
+	// Settings defined default error codes
 	for _, r := range cfg.Error.Responses {
 		code := mikros_openapi.ResponseCode(r.Code)
 		desc := r.Description
@@ -102,7 +117,18 @@ func mergedMethodResponses(method *protobuf.Method, cfg *settings.Settings) []*m
 		}
 	}
 
-	for _, r := range lookup.LoadMethodResponseCodes(method) {
+	responses := lookup.LoadMethodResponseCodes(method)
+	if hasAnySuccessResponse(responses) {
+		for code := range merged {
+			if lookup.IsSuccessResponseCode(&mikros_openapi.Response{Code: &code}) {
+				delete(merged, code)
+			}
+		}
+	}
+
+	// Response codes defined in the proto file. Here we'll override the default
+	// codes (success and errors) if they are defined.
+	for _, r := range responses {
 		code := r.GetCode()
 		if code == mikros_openapi.ResponseCode_RESPONSE_CODE_UNSPECIFIED {
 			continue
@@ -125,11 +151,12 @@ func mergedMethodResponses(method *protobuf.Method, cfg *settings.Settings) []*m
 	return out
 }
 
-func responseDescriptionOrDefault(code *mikros_openapi.Response) string {
-	if code.GetDescription() != "" {
-		return code.GetDescription()
+func hasAnySuccessResponse(response []*mikros_openapi.Response) bool {
+	for _, r := range response {
+		if lookup.IsSuccessResponseCode(r) {
+			return true
+		}
 	}
 
-	// Response code with no description will have a default message.
-	return fmt.Sprintf("HTTP %d response", code.GetCode())
+	return false
 }

@@ -41,26 +41,31 @@ service UserBffService {
       body: "*"
     };
 
-    option (openapi.operation) = {
-      disable_inbound_processing: true
-      summary: "Create a new user"
-      description: "Create a new user according request options."
-      tags: "user-bff"
-      response: {
-        code: RESPONSE_CODE_CREATED
-        description: "Successfully created a new user"
-      }
-
-      response: {
-        code: RESPONSE_CODE_UNAUTHORIZED
-        description: "Unauthorized access"
-      }
-
-      response: {
-        code: RESPONSE_CODE_BAD_REQUEST
-        description: "Invalid request arguments"
-      }
-    };
+//    option (openapi.operation) = {
+//      disable_inbound_processing: true
+//      summary: "Create a new user"
+//      description: "Create a new user according request options."
+//      tags: "user-bff"
+//      response: {
+//        code: RESPONSE_CODE_OK
+//        description: "Successfully created a new user"
+//      }
+//
+//      response: {
+//        code: RESPONSE_CODE_CREATED
+//        description: "Successfully created a new user"
+//      }
+//
+//      response: {
+//        code: RESPONSE_CODE_UNAUTHORIZED
+//        description: "Unauthorized access"
+//      }
+//
+//      response: {
+//        code: RESPONSE_CODE_BAD_REQUEST
+//        description: "Invalid request arguments"
+//      }
+//    };
   }
 
   rpc GetUser(GetUserRequest) returns (GetUserResponse) {
