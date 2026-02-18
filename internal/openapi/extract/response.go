@@ -13,22 +13,21 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
 )
 
-func parseOperationResponses(
+func (p *Parser) parseOperationResponses(
 	method *protobuf.Method,
-	cfg *settings.Settings,
 	converter *mapping.Message,
 ) map[string]*spec.Response {
 	var (
 		responses         = make(map[string]*spec.Response)
 		successSchemaName = method.ResponseType.Name
-		errorName         = cfg.Error.DefaultName
+		errorName         = p.cfg.Error.DefaultName
 	)
 
-	if cfg.Mikros.UseOutboundMessages {
+	if p.cfg.Mikros.UseOutboundMessages {
 		successSchemaName = converter.WireOutputToOutbound(successSchemaName)
 	}
 
-	for _, code := range mergedMethodResponses(method, cfg) {
+	for _, code := range mergedMethodResponses(method, p.cfg) {
 		refName := refComponentsSchemas + errorName
 		if lookup.IsSuccessResponseCode(code) {
 			refName = refComponentsSchemas + successSchemaName
@@ -62,28 +61,27 @@ func responseDescriptionOrDefault(code *mikros_openapi.Response) string {
 	return fmt.Sprintf("HTTP %d response", code.GetCode())
 }
 
-func parseComponentsResponses(pkg *protobuf.Protobuf, cfg *settings.Settings) map[string]*spec.Response {
+func (p *Parser) parseComponentsResponses() map[string]*spec.Response {
 	responses := make(map[string]*spec.Response)
-	for _, method := range pkg.Service.Methods {
-		for _, response := range parseMethodComponentsResponses(method, cfg) {
-			responses[response.SchemaName] = response
+	for _, method := range p.pkg.Service.Methods {
+		for name, response := range p.parseMethodComponentsResponses(method) {
+			responses[name] = response
 		}
 	}
 
 	return responses
 }
 
-func parseMethodComponentsResponses(method *protobuf.Method, cfg *settings.Settings) []*spec.Response {
-	var responses []*spec.Response
-	for _, code := range mergedMethodResponses(method, cfg) {
+func (p *Parser) parseMethodComponentsResponses(method *protobuf.Method) map[string]*spec.Response {
+	responses := make(map[string]*spec.Response)
+	for _, code := range mergedMethodResponses(method, p.cfg) {
 		if lookup.IsSuccessResponseCode(code) {
 			continue
 		}
 
-		errorName := cfg.Error.DefaultName
-		responses = append(responses, &spec.Response{
-			SchemaName:  errorName,
-			Description: cfg.Error.DefaultDescription,
+		errorName := p.cfg.Error.DefaultName
+		responses[errorName] = &spec.Response{
+			Description: p.cfg.Error.DefaultDescription,
 			Content: map[string]*spec.Media{
 				"application/json": {
 					Schema: &spec.Schema{
@@ -91,7 +89,7 @@ func parseMethodComponentsResponses(method *protobuf.Method, cfg *settings.Setti
 					},
 				},
 			},
-		})
+		}
 	}
 
 	return responses
@@ -107,7 +105,7 @@ func mergedMethodResponses(method *protobuf.Method, cfg *settings.Settings) []*m
 		Description: &cfg.Operation.DefaultSuccessDescription,
 	}
 
-	// Settings defined default error codes
+	// cfg defined default error codes
 	for _, r := range cfg.Error.Responses {
 		code := mikros_openapi.ResponseCode(r.Code)
 		desc := r.Description

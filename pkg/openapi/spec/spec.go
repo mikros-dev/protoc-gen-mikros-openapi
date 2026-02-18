@@ -1,19 +1,12 @@
 package spec
 
-import (
-	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
-)
-
-// Openapi describes the entire OpenAPI specification.
+// Openapi describes the OpenAPI specification.
 type Openapi struct {
 	Version    string                           `yaml:"openapi"`
 	Info       *Info                            `yaml:"info"`
 	Servers    []*Server                        `yaml:"servers,omitempty"`
 	PathItems  map[string]map[string]*Operation `yaml:"paths,omitempty"`
 	Components *Components                      `yaml:"components,omitempty"`
-
-	// private
-	ModuleName string `yaml:"-"`
 }
 
 // Info describes the service.
@@ -39,11 +32,6 @@ type Operation struct {
 	Responses       map[string]*Response  `yaml:"responses,omitempty"`
 	RequestBody     *RequestBody          `yaml:"requestBody,omitempty"`
 	SecuritySchemes []map[string][]string `yaml:"security,omitempty"`
-
-	// private
-	ProtobufMethod *protobuf.Method `yaml:"-"`
-	Method         string `yaml:"-"`
-	Endpoint       string `yaml:"-"`
 }
 
 // Parameter describes a single operation parameter.
@@ -59,9 +47,6 @@ type Parameter struct {
 type Response struct {
 	Description string            `yaml:"description,omitempty"`
 	Content     map[string]*Media `yaml:"content"`
-
-	// private
-	SchemaName string `yaml:"-"`
 }
 
 // RequestBody describes a request body.
@@ -69,6 +54,11 @@ type RequestBody struct {
 	Required    bool              `yaml:"required"`
 	Description string            `yaml:"description,omitempty"`
 	Content     map[string]*Media `yaml:"content"`
+}
+
+// Media describes a media type.
+type Media struct {
+	Schema *Schema `json:"schema,omitempty"`
 }
 
 // Schema represents a swagger schema of a field/parameter/object.
@@ -86,32 +76,11 @@ type Schema struct {
 	Properties           map[string]*Schema `yaml:"properties,omitempty"`
 	AdditionalProperties *Schema            `yaml:"additionalProperties,omitempty"`
 	AnyOf                []*Schema          `yaml:"anyOf,omitempty"`
-
-	// private
-	Message    *protobuf.Message `yaml:"-"`
-	SchemaType SchemaType `yaml:"-"`
-	Required   bool `yaml:"-"`
-	Field      *protobuf.Field `yaml:"-"`
-}
-
-// IsRequired returns true if the field is required.
-func (s *Schema) IsRequired() bool {
-	return s.Required
 }
 
 // HasAdditionalProperties returns true if the field has additional properties.
 func (s *Schema) HasAdditionalProperties() bool {
 	return s.AdditionalProperties != nil && s.AdditionalProperties != &Schema{}
-}
-
-// ProtoField returns the protobuf field that this schema was generated from.
-func (s *Schema) ProtoField() *protobuf.Field {
-	return s.Field
-}
-
-// Media describes a media type.
-type Media struct {
-	Schema *Schema `json:"schema,omitempty"`
 }
 
 // Components is a structure that describes the components of the API.

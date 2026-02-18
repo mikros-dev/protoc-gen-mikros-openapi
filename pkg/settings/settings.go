@@ -107,7 +107,7 @@ func LoadSettings(filename string) (*Settings, error) {
 		return nil, fmt.Errorf("could not load mikros plugin settings file: %w", err)
 	}
 	if err := cfg.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid Settings: %w", err)
+		return nil, fmt.Errorf("invalid cfg: %w", err)
 	}
 	settings.MikrosSettings = cfg
 

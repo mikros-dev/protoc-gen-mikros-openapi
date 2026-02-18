@@ -31,7 +31,7 @@ func (p *Parser) parseOperationParameters(
 	)
 
 	for _, field := range requestMessage.Fields {
-		parameter, err := p.parseOperationParameter(method, field, requestMessage, pathParameters, httpRule)
+		parameter, info, err := p.parseOperationParameter(method, field, requestMessage, pathParameters, httpRule)
 		if err != nil {
 			return nil, err
 		}
@@ -43,6 +43,14 @@ func (p *Parser) parseOperationParameters(
 		}
 
 		params = append(params, parameter)
+
+		if parameter.Schema != nil {
+			// Track parameter schemas for later reference
+			p.schemas[parameter.Schema] = &schemaInfo{
+				Info:       info,
+				ProtoField: field,
+			}
+		}
 	}
 
 	return params, nil
@@ -54,7 +62,7 @@ func (p *Parser) parseOperationParameter(
 	message *protobuf.Message,
 	pathParameters []string,
 	httpRule *annotations.HttpRule,
-) (*spec.Parameter, error) {
+) (*spec.Parameter, *spec.SchemaInfo, error) {
 	var (
 		properties       = mikros_openapi.LoadFieldExtensions(field.Proto)
 		methodExtensions = mikros_extensions.LoadMethodExtensions(method.Proto)
@@ -71,7 +79,7 @@ func (p *Parser) parseOperationParameter(
 			},
 		})
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		name = naming.Inbound()
@@ -82,12 +90,15 @@ func (p *Parser) parseOperationParameter(
 	}
 
 	return &spec.Parameter{
-		Required:    getParameterMandatory(properties, location),
-		Location:    location,
-		Name:        name,
-		Description: description,
-		Schema:      newSchemaFromProtobufField(field, p.pkg, p.cfg),
-	}, nil
+			Required:    getParameterMandatory(properties, location),
+			Location:    location,
+			Name:        name,
+			Description: description,
+			Schema:      newSchemaFromProtobufField(field, p.pkg, p.cfg),
+		}, &spec.SchemaInfo{
+			FieldDescriptor:   field.Proto,
+			MessageDescriptor: nil, // I think this will be unnecessary
+		}, nil
 }
 
 func getParameterMandatory(properties *mikros_openapi.Property, location string) bool {

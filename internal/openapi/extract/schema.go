@@ -6,7 +6,6 @@ import (
 
 	"github.com/juliangruber/go-intersect"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
-	mikros_extensions "github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf/extensions"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/openapi/lookup"
@@ -16,13 +15,13 @@ import (
 )
 
 var (
-	supportedSchemas = []spec.SchemaType{
-		spec.SchemaTypeString,
-		spec.SchemaTypeInteger,
-		spec.SchemaTypeNumber,
-		spec.SchemaTypeBool,
-		spec.SchemaTypeObject,
-		spec.SchemaTypeArray,
+	supportedSchemas = []SchemaType{
+		SchemaTypeString,
+		SchemaTypeInteger,
+		SchemaTypeNumber,
+		SchemaTypeBool,
+		SchemaTypeObject,
+		SchemaTypeArray,
 	}
 )
 
@@ -31,16 +30,15 @@ var (
 func GetAdditionalPropertySchemas(
 	field *protobuf.Field,
 	parser *MessageParser,
-	methodExtensions *mikros_extensions.MikrosMethodExtensions,
-	httpCtx *methodHTTPContext,
+	httpCtx *methodContext,
 ) (map[string]*spec.Schema, error) {
 	if field.MapValueTypeKind() == protoreflect.MessageKind {
-		return getMessageAdditionalSchema(field, parser, methodExtensions, httpCtx)
+		return getMessageAdditionalSchema(field, parser, httpCtx)
 	}
 
 	if field.MapValueTypeKind() == protoreflect.EnumKind {
 		return map[string]*spec.Schema{
-			lookup.TrimPackageName(field.MapValueTypeName()): getEnumAdditionalSchema(field, parser.Package),
+			lookup.TrimPackageName(field.MapValueTypeName()): getEnumAdditionalSchema(field, parser.pkg),
 		}, nil
 	}
 
@@ -51,13 +49,11 @@ func newSchemaFromProtobufField(field *protobuf.Field, pkg *protobuf.Protobuf, c
 	var (
 		properties = mikros_openapi.LoadFieldExtensions(field.Proto)
 		schema     = &spec.Schema{
-			Type:  spec.SchemaTypeFromProtobufField(field).String(),
-			Field: field, // Saves the field to be used later.
+			Type: SchemaTypeFromProtobufField(field).String(),
 		}
 	)
 
 	if properties != nil {
-		schema.Required = properties.GetRequired()
 		schema.Example = properties.GetExample()
 		schema.Description = properties.GetDescription()
 		schema.Format = protoFormatToSchemaFormat(properties.GetFormat())
@@ -74,13 +70,13 @@ func newSchemaFromProtobufField(field *protobuf.Field, pkg *protobuf.Protobuf, c
 
 	// metadata
 	if field.IsProtoStruct() {
-		schema.Type = spec.SchemaTypeObject.String()
+		schema.Type = SchemaTypeObject.String()
 		schema.AdditionalProperties = &spec.Schema{}
 	}
 
 	// interface
 	if field.IsProtoValue() {
-		schema.Type = spec.SchemaTypeObject.String()
+		schema.Type = SchemaTypeObject.String()
 		for _, t := range supportedSchemas {
 			schema.AnyOf = append(schema.AnyOf, &spec.Schema{
 				Type: t.String(),
@@ -91,15 +87,15 @@ func newSchemaFromProtobufField(field *protobuf.Field, pkg *protobuf.Protobuf, c
 	if field.IsMap() {
 		// Map should always have keys as string, because JSON does not support
 		// other types as keys.
-		schema.Type = spec.SchemaTypeObject.String()
+		schema.Type = SchemaTypeObject.String()
 		schema.AdditionalProperties = getMapSchema(field)
 	}
 
 	if field.IsArray() {
-		schema.Type = spec.SchemaTypeArray.String()
+		schema.Type = SchemaTypeArray.String()
 		if schema.Items == nil {
 			schema.Items = &spec.Schema{
-				Type: spec.SchemaTypeFromProtobufField(field).String(),
+				Type: SchemaTypeFromProtobufField(field).String(),
 			}
 		}
 	}
@@ -147,20 +143,20 @@ func getMapSchema(field *protobuf.Field) *spec.Schema {
 	return schema
 }
 
-func schemaTypeFromMapType(mapType protoreflect.Kind) spec.SchemaType {
+func schemaTypeFromMapType(mapType protoreflect.Kind) SchemaType {
 	switch mapType {
 	case protoreflect.FloatKind, protoreflect.DoubleKind:
-		return spec.SchemaTypeNumber
+		return SchemaTypeNumber
 	case protoreflect.MessageKind:
-		return spec.SchemaTypeObject
+		return SchemaTypeObject
 	case protoreflect.EnumKind, protoreflect.StringKind, protoreflect.BytesKind:
-		return spec.SchemaTypeString
+		return SchemaTypeString
 	case protoreflect.BoolKind:
-		return spec.SchemaTypeBool
+		return SchemaTypeBool
 	default:
 	}
 
-	return spec.SchemaTypeInteger
+	return SchemaTypeInteger
 }
 
 func getEnumValues(field *protobuf.Field, pkg *protobuf.Protobuf, cfg *settings.Settings) []string {
@@ -217,20 +213,19 @@ func enumStringsIntersection(s1, s2 string) string {
 func getMessageAdditionalSchema(
 	field *protobuf.Field,
 	parser *MessageParser,
-	methodExtensions *mikros_extensions.MikrosMethodExtensions,
-	httpCtx *methodHTTPContext,
+	httpCtx *methodContext,
 ) (map[string]*spec.Schema, error) {
 	var (
 		packageName = lookup.GetPackageName(field.MapValueTypeName())
 		messages    []*protobuf.Message
 	)
 
-	if packageName == parser.Package.PackageName {
-		messages = parser.Package.Messages
+	if packageName == parser.pkg.PackageName {
+		messages = parser.pkg.Messages
 	}
-	if packageName != parser.Package.PackageName {
+	if packageName != parser.pkg.PackageName {
 		// find foreign message
-		m, err := lookup.LoadForeignMessages(field.MapValueTypeName(), parser.Package)
+		m, err := lookup.LoadForeignMessages(field.MapValueTypeName(), parser.pkg)
 		if err != nil {
 			return nil, err
 		}
@@ -243,7 +238,7 @@ func getMessageAdditionalSchema(
 		return msg.Name == lookup.TrimPackageName(field.MapValueTypeName())
 	})
 	if index != -1 {
-		return parser.GetMessageSchemas(messages[index], methodExtensions, httpCtx)
+		return parser.GetMessageSchemas(messages[index], httpCtx)
 	}
 
 	return nil, nil
@@ -251,7 +246,7 @@ func getMessageAdditionalSchema(
 
 func getEnumAdditionalSchema(field *protobuf.Field, pkg *protobuf.Protobuf) *spec.Schema {
 	schema := &spec.Schema{
-		Type: spec.SchemaTypeString.String(),
+		Type: SchemaTypeString.String(),
 	}
 
 	enum := lookup.FindEnumByType(field.MapValueTypeName(), pkg)
@@ -264,4 +259,13 @@ func getEnumAdditionalSchema(field *protobuf.Field, pkg *protobuf.Protobuf) *spe
 	}
 
 	return schema
+}
+
+func isFieldRequired(field *protobuf.Field) bool {
+	properties := mikros_openapi.LoadFieldExtensions(field.Proto)
+	if properties == nil {
+		return false
+	}
+
+	return properties.GetRequired()
 }

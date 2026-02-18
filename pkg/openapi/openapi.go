@@ -17,17 +17,21 @@ import (
 //
 // It requires previously loading the mikros-openapi plugin settings so
 // it can properly translate to the desired specification.
-func FromProto(_ context.Context, plugin *protogen.Plugin, cfg *settings.Settings) (*spec.Openapi, error) {
+func FromProto(
+	_ context.Context,
+	plugin *protogen.Plugin,
+	cfg *settings.Settings,
+) (*spec.Openapi, spec.Metadata, error) {
 	pkg, err := protobuf.Parse(protobuf.ParseOptions{
 		Plugin: plugin,
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Only translate protobuf files from HTTP services-like.
 	if !isHTTPService(pkg) {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	// Create our parser to deal with the protobuf translation into the

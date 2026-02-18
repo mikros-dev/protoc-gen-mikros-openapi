@@ -10,7 +10,7 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
 )
 
-func parseRequestBody(method *protobuf.Method, httpMethod string, pkg *protobuf.Protobuf) *spec.RequestBody {
+func (p *Parser) parseRequestBody(method *protobuf.Method, httpMethod string) *spec.RequestBody {
 	if httpMethod != http.MethodPost && httpMethod != http.MethodPut && httpMethod != http.MethodPatch {
 		return nil
 	}
@@ -24,7 +24,8 @@ func parseRequestBody(method *protobuf.Method, httpMethod string, pkg *protobuf.
 	if httpMethod == http.MethodPost {
 		required = true
 	}
-	if extensions := lookup.LoadMessageExtensionsByName(pkg, method.RequestType.Name); extensions != nil {
+
+	if extensions := lookup.LoadMessageExtensionsByName(p.pkg, method.RequestType.Name); extensions != nil {
 		description = extensions.GetOperation().GetRequestBody().GetDescription()
 
 		switch extensions.GetOperation().GetRequestBody().GetType() {
