@@ -10,7 +10,7 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
 )
 
-func (p *Parser) parseRequestBody(method *protobuf.Method, httpMethod string) *spec.RequestBody {
+func (p *Parser) buildRequestBody(method *protobuf.Method, httpMethod string) *spec.RequestBody {
 	if httpMethod != http.MethodPost && httpMethod != http.MethodPut && httpMethod != http.MethodPatch {
 		return nil
 	}

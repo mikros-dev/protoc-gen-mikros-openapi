@@ -13,7 +13,7 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
 )
 
-func (p *Parser) parseOperationParameters(
+func (p *Parser) collectOperationParameters(
 	method *protobuf.Method,
 	httpRule *annotations.HttpRule,
 ) ([]*spec.Parameter, error) {
@@ -32,7 +32,7 @@ func (p *Parser) parseOperationParameters(
 	)
 
 	for _, field := range requestMessage.Fields {
-		parameter, info, err := p.parseOperationParameter(method, field, requestMessage, pathParameters, httpRule)
+		parameter, info, err := p.buildOperationParameter(method, field, requestMessage, pathParameters, httpRule)
 		if err != nil {
 			return nil, err
 		}
@@ -57,7 +57,7 @@ func (p *Parser) parseOperationParameters(
 	return params, nil
 }
 
-func (p *Parser) parseOperationParameter(
+func (p *Parser) buildOperationParameter(
 	method *protobuf.Method,
 	field *protobuf.Field,
 	message *protobuf.Message,
@@ -91,18 +91,17 @@ func (p *Parser) parseOperationParameter(
 	}
 
 	return &spec.Parameter{
-			Required:    getParameterMandatory(properties, location),
+			Required:    isParameterRequired(properties, location),
 			Location:    location,
 			Name:        name,
 			Description: description,
-			Schema:      newSchemaFromProtobufField(field, p.pkg, p.cfg),
+			Schema:      buildSchemaFromField(field, p.pkg, p.cfg),
 		}, &metadata.SchemaInfo{
-			FieldDescriptor:   field.Proto,
-			MessageDescriptor: nil, // I think this will be unnecessary
+			FieldDescriptor: field.Proto,
 		}, nil
 }
 
-func getParameterMandatory(properties *mikros_openapi.Property, location string) bool {
+func isParameterRequired(properties *mikros_openapi.Property, location string) bool {
 	if properties != nil {
 		if properties.GetRequired() {
 			return true

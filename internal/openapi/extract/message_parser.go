@@ -18,8 +18,8 @@ type MessageParser struct {
 	fields         map[*spec.Schema]*protobuf.Field   // maps created schemas to their Protobuf field
 }
 
-// GetMessageSchemas builds OpenAPI schemas from a Protobuf message.
-func (m *MessageParser) GetMessageSchemas(
+// CollectMessageSchemas builds OpenAPI schemas from a Protobuf message.
+func (m *MessageParser) CollectMessageSchemas(
 	message *protobuf.Message,
 	httpCtx *methodContext,
 ) (map[string]*spec.Schema, error) {
@@ -54,7 +54,7 @@ func (m *MessageParser) GetMessageSchemas(
 	}
 
 	scm := &spec.Schema{
-		Type:               SchemaTypeObject.String(),
+		Type:               schemaTypeObject.String(),
 		Properties:         props,
 		RequiredProperties: requiredProperties,
 	}
@@ -169,7 +169,7 @@ func (m *MessageParser) collectChildSchemas(
 		return nil
 	}
 
-	cs, err := m.GetMessageSchemas(child, httpCtx)
+	cs, err := m.CollectMessageSchemas(child, httpCtx)
 	if err != nil {
 		return err
 	}
@@ -202,15 +202,15 @@ func (m *MessageParser) newRefSchema(
 	field *protobuf.Field,
 	refDestination string,
 ) *spec.Schema {
-	schema := newSchemaFromProtobufField(field, m.pkg, m.cfg)
+	schema := buildSchemaFromField(field, m.pkg, m.cfg)
 
-	if schema.Type == SchemaTypeArray.String() {
+	if schema.Type == schemaTypeArray.String() {
 		schema.Items = &spec.Schema{
 			Ref: refComponentsSchemas + refDestination,
 		}
 	}
 
-	if schema.Type != SchemaTypeArray.String() {
+	if schema.Type != schemaTypeArray.String() {
 		schema.Type = "" // Clears the type
 		schema.Ref = refComponentsSchemas + refDestination
 	}
@@ -234,11 +234,11 @@ func (m *MessageParser) handleRegularField(
 	schemas, props map[string]*spec.Schema,
 ) (bool, error) {
 	name := overrideName(ext, field.Name)
-	fs := newSchemaFromProtobufField(field, m.pkg, m.cfg)
+	fs := buildSchemaFromField(field, m.pkg, m.cfg)
 	m.trackFieldProtobuf(fs, field)
 	props[name] = fs
 
-	if !fs.HasAdditionalProperties() {
+	if !hasAdditionalProperties(fs) {
 		return isFieldRequired(field), nil
 	}
 

@@ -4,7 +4,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/juliangruber/go-intersect"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
@@ -15,13 +14,13 @@ import (
 )
 
 var (
-	supportedSchemas = []SchemaType{
-		SchemaTypeString,
-		SchemaTypeInteger,
-		SchemaTypeNumber,
-		SchemaTypeBool,
-		SchemaTypeObject,
-		SchemaTypeArray,
+	supportedSchemas = []schemaType{
+		schemaTypeString,
+		schemaTypeInteger,
+		schemaTypeNumber,
+		schemaTypeBool,
+		schemaTypeObject,
+		schemaTypeArray,
 	}
 )
 
@@ -45,11 +44,11 @@ func GetAdditionalPropertySchemas(
 	return nil, nil
 }
 
-func newSchemaFromProtobufField(field *protobuf.Field, pkg *protobuf.Protobuf, cfg *settings.Settings) *spec.Schema {
+func buildSchemaFromField(field *protobuf.Field, pkg *protobuf.Protobuf, cfg *settings.Settings) *spec.Schema {
 	var (
 		properties = mikros_openapi.LoadFieldExtensions(field.Proto)
 		schema     = &spec.Schema{
-			Type: SchemaTypeFromProtobufField(field).String(),
+			Type: schemaTypeFromProtobufField(field).String(),
 		}
 	)
 
@@ -70,13 +69,13 @@ func newSchemaFromProtobufField(field *protobuf.Field, pkg *protobuf.Protobuf, c
 
 	// metadata
 	if field.IsProtoStruct() {
-		schema.Type = SchemaTypeObject.String()
+		schema.Type = schemaTypeObject.String()
 		schema.AdditionalProperties = &spec.Schema{}
 	}
 
 	// interface
 	if field.IsProtoValue() {
-		schema.Type = SchemaTypeObject.String()
+		schema.Type = schemaTypeObject.String()
 		for _, t := range supportedSchemas {
 			schema.AnyOf = append(schema.AnyOf, &spec.Schema{
 				Type: t.String(),
@@ -87,15 +86,15 @@ func newSchemaFromProtobufField(field *protobuf.Field, pkg *protobuf.Protobuf, c
 	if field.IsMap() {
 		// Map should always have keys as string, because JSON does not support
 		// other types as keys.
-		schema.Type = SchemaTypeObject.String()
+		schema.Type = schemaTypeObject.String()
 		schema.AdditionalProperties = getMapSchema(field)
 	}
 
 	if field.IsArray() {
-		schema.Type = SchemaTypeArray.String()
+		schema.Type = schemaTypeArray.String()
 		if schema.Items == nil {
 			schema.Items = &spec.Schema{
-				Type: SchemaTypeFromProtobufField(field).String(),
+				Type: schemaTypeFromProtobufField(field).String(),
 			}
 		}
 	}
@@ -143,20 +142,20 @@ func getMapSchema(field *protobuf.Field) *spec.Schema {
 	return schema
 }
 
-func schemaTypeFromMapType(mapType protoreflect.Kind) SchemaType {
+func schemaTypeFromMapType(mapType protoreflect.Kind) schemaType {
 	switch mapType {
 	case protoreflect.FloatKind, protoreflect.DoubleKind:
-		return SchemaTypeNumber
+		return schemaTypeNumber
 	case protoreflect.MessageKind:
-		return SchemaTypeObject
+		return schemaTypeObject
 	case protoreflect.EnumKind, protoreflect.StringKind, protoreflect.BytesKind:
-		return SchemaTypeString
+		return schemaTypeString
 	case protoreflect.BoolKind:
-		return SchemaTypeBool
+		return schemaTypeBool
 	default:
 	}
 
-	return SchemaTypeInteger
+	return schemaTypeInteger
 }
 
 func getEnumValues(field *protobuf.Field, pkg *protobuf.Protobuf, cfg *settings.Settings) []string {
@@ -194,20 +193,28 @@ func getEnumPrefix(enum *protobuf.Enum) string {
 }
 
 func enumStringsIntersection(s1, s2 string) string {
-	p1 := strings.Split(s1, "_")
-	p2 := strings.Split(s2, "_")
+	var (
+		p1 = strings.Split(s1, "_")
+		p2 = strings.Split(s2, "_")
+	)
 
-	i := intersect.Simple(p1, p2)
-	if len(i) == 0 {
+	limit := len(p1)
+	if len(p2) < limit {
+		limit = len(p2)
+	}
+
+	var prefix []string
+	for i := 0; i < limit; i++ {
+		if p1[i] != p2[i] {
+			break
+		}
+		prefix = append(prefix, p1[i])
+	}
+	if len(prefix) == 0 {
 		return ""
 	}
 
-	var parts []string
-	for _, s := range i {
-		parts = append(parts, s.(string))
-	}
-
-	return strings.Join(parts, "_") + "_"
+	return strings.Join(prefix, "_") + "_"
 }
 
 func getMessageAdditionalSchema(
@@ -238,7 +245,7 @@ func getMessageAdditionalSchema(
 		return msg.Name == lookup.TrimPackageName(field.MapValueTypeName())
 	})
 	if index != -1 {
-		return parser.GetMessageSchemas(messages[index], httpCtx)
+		return parser.CollectMessageSchemas(messages[index], httpCtx)
 	}
 
 	return nil, nil
@@ -246,7 +253,7 @@ func getMessageAdditionalSchema(
 
 func getEnumAdditionalSchema(field *protobuf.Field, pkg *protobuf.Protobuf) *spec.Schema {
 	schema := &spec.Schema{
-		Type: SchemaTypeString.String(),
+		Type: schemaTypeString.String(),
 	}
 
 	enum := lookup.FindEnumByType(field.MapValueTypeName(), pkg)
@@ -268,4 +275,12 @@ func isFieldRequired(field *protobuf.Field) bool {
 	}
 
 	return properties.GetRequired()
+}
+
+func hasAdditionalProperties(schema *spec.Schema) bool {
+	if schema == nil {
+		return false
+	}
+
+	return schema.AdditionalProperties != nil
 }

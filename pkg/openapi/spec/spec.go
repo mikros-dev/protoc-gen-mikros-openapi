@@ -78,11 +78,6 @@ type Schema struct {
 	AnyOf                []*Schema          `yaml:"anyOf,omitempty"`
 }
 
-// HasAdditionalProperties returns true if the field has additional properties.
-func (s *Schema) HasAdditionalProperties() bool {
-	return s.AdditionalProperties != nil && s.AdditionalProperties != &Schema{}
-}
-
 // Components is a structure that describes the components of the API.
 type Components struct {
 	Schemas   map[string]*Schema   `yaml:"schemas"`

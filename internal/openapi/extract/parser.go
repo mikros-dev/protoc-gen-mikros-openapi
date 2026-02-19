@@ -47,22 +47,22 @@ func NewParser(pkg *protobuf.Protobuf, cfg *settings.Settings) *Parser {
 
 // Parse parses the protobuf file into an OpenAPI specification.
 func (p *Parser) Parse() (*spec.Openapi, metadata.Metadata, error) {
-	info, err := p.parseInfo()
+	info, err := p.buildInfo()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	pathItems, operationInfo, err := p.parsePathItems()
+	pathItems, operationInfo, err := p.collectPathItems()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	components, err := p.parseComponents()
+	components, err := p.buildComponents()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	servers, err := p.parseServers()
+	servers, err := p.buildServers()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -80,7 +80,7 @@ func (p *Parser) Parse() (*spec.Openapi, metadata.Metadata, error) {
 		}), nil
 }
 
-func (p *Parser) parseInfo() (*spec.Info, error) {
+func (p *Parser) buildInfo() (*spec.Info, error) {
 	f, err := lookup.FindMainModuleFile(p.pkg, p.cfg)
 	if err != nil {
 		return nil, err
@@ -106,7 +106,7 @@ func (p *Parser) parseInfo() (*spec.Info, error) {
 	}, nil
 }
 
-func (p *Parser) parseServers() ([]*spec.Server, error) {
+func (p *Parser) buildServers() ([]*spec.Server, error) {
 	f, err := lookup.FindMainModuleFile(p.pkg, p.cfg)
 	if err != nil {
 		return nil, err
@@ -129,7 +129,7 @@ func (p *Parser) parseServers() ([]*spec.Server, error) {
 	return servers, nil
 }
 
-func (p *Parser) parsePathItems() (map[string]map[string]*spec.Operation, map[string]*metadata.OperationInfo, error) {
+func (p *Parser) collectPathItems() (map[string]map[string]*spec.Operation, map[string]*metadata.OperationInfo, error) {
 	var (
 		pathItems     = make(map[string]map[string]*spec.Operation)
 		operationInfo = make(map[string]*metadata.OperationInfo)
@@ -139,7 +139,7 @@ func (p *Parser) parsePathItems() (map[string]map[string]*spec.Operation, map[st
 	)
 
 	for _, method := range p.pkg.Service.Methods {
-		operation, info, err := p.parseOperation(method, converter)
+		operation, info, err := p.buildOperation(method, converter)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -163,7 +163,7 @@ func (p *Parser) parsePathItems() (map[string]map[string]*spec.Operation, map[st
 	return pathItems, operationInfo, nil
 }
 
-func (p *Parser) parseOperation(
+func (p *Parser) buildOperation(
 	method *protobuf.Method,
 	converter *mapping.Message,
 ) (*spec.Operation, *metadata.OperationInfo, error) {
@@ -198,7 +198,7 @@ func (p *Parser) parseOperation(
 		description = extensions.GetDescription()
 	}
 
-	parameters, err := p.parseOperationParameters(method, httpRule)
+	parameters, err := p.collectOperationParameters(method, httpRule)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -209,9 +209,9 @@ func (p *Parser) parseOperation(
 			ID:              method.Name,
 			Tags:            tags,
 			Parameters:      parameters,
-			Responses:       p.parseOperationResponses(method, converter),
-			RequestBody:     p.parseRequestBody(method, m),
-			SecuritySchemes: parseOperationSecurity(p.pkg),
+			Responses:       p.buildOperationResponses(method, converter),
+			RequestBody:     p.buildRequestBody(method, m),
+			SecuritySchemes: buildOperationSecurity(p.pkg),
 		}, &metadata.OperationInfo{
 			Method:     m,
 			Endpoint:   endpoint,

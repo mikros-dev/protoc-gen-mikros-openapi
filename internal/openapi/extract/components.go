@@ -12,23 +12,23 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
 )
 
-func (p *Parser) parseComponents() (*spec.Components, error) {
-	schemas, err := p.parseComponentsSchemas()
+func (p *Parser) buildComponents() (*spec.Components, error) {
+	schemas, err := p.collectComponentsSchemas()
 	if err != nil {
 		return nil, err
 	}
 
 	return &spec.Components{
 		Schemas:   schemas,
-		Responses: p.parseComponentsResponses(),
-		Security:  parseComponentsSecurity(p.pkg),
+		Responses: p.buildComponentResponses(),
+		Security:  buildComponentsSecurity(p.pkg),
 	}, nil
 }
 
-func (p *Parser) parseComponentsSchemas() (map[string]*spec.Schema, error) {
+func (p *Parser) collectComponentsSchemas() (map[string]*spec.Schema, error) {
 	schemas := make(map[string]*spec.Schema)
 
-	methodComponents, err := p.getMethodComponentsSchemas()
+	methodComponents, err := p.collectMethodComponentsSchemas()
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func (p *Parser) parseComponentsSchemas() (map[string]*spec.Schema, error) {
 	return schemas, nil
 }
 
-func (p *Parser) getMethodComponentsSchemas() (map[string]*spec.Schema, error) {
+func (p *Parser) collectMethodComponentsSchemas() (map[string]*spec.Schema, error) {
 	var (
 		schemas = make(map[string]*spec.Schema)
 		parser  = &MessageParser{
@@ -139,14 +139,14 @@ func (p *Parser) collectRequestSchemas(
 	httpCtx *methodContext,
 	acc map[string]*spec.Schema,
 ) error {
-	reqSchemas, err := parser.GetMessageSchemas(request, httpCtx)
+	reqSchemas, err := parser.CollectMessageSchemas(request, httpCtx)
 	if err != nil {
 		return err
 	}
 
 	if p.cfg.Mikros.UseInboundMessages {
 		if httpCtx.extensions != nil && !httpCtx.extensions.GetDisableInboundProcessing() {
-			reqSchemas, err = p.processInboundMessages(parser, reqSchemas)
+			reqSchemas, err = p.transformSchemasInbound(parser, reqSchemas)
 			if err != nil {
 				return err
 			}
@@ -157,7 +157,7 @@ func (p *Parser) collectRequestSchemas(
 	return nil
 }
 
-func (p *Parser) processInboundMessages(
+func (p *Parser) transformSchemasInbound(
 	parser *MessageParser,
 	schemas map[string]*spec.Schema,
 ) (map[string]*spec.Schema, error) {
@@ -222,7 +222,7 @@ func (p *Parser) collectResponseSchemas(
 	httpCtx *methodContext,
 	acc map[string]*spec.Schema,
 ) error {
-	respSchemas, err := parser.GetMessageSchemas(response, httpCtx)
+	respSchemas, err := parser.CollectMessageSchemas(response, httpCtx)
 	if err != nil {
 		return err
 	}
@@ -233,7 +233,7 @@ func (p *Parser) collectResponseSchemas(
 			Settings: p.cfg.MikrosSettings,
 		})
 
-		respSchemas, err = p.processOutboundMessages(parser, respSchemas, converter)
+		respSchemas, err = p.transformSchemasOutbound(parser, respSchemas, converter)
 		if err != nil {
 			return err
 		}
@@ -256,19 +256,19 @@ func mergeSchemas(dst, src map[string]*spec.Schema, keyTransform func(string) st
 	}
 }
 
-func (p *Parser) processOutboundMessages(
+func (p *Parser) transformSchemasOutbound(
 	parser *MessageParser,
 	schemas map[string]*spec.Schema,
 	converter *mapping.Message,
 ) (map[string]*spec.Schema, error) {
 	for _, schema := range schemas {
-		if !schemaNeedsConversion(schema) {
+		if !schemaNeedsOutboundTransform(schema) {
 			continue
 		}
 
-		convertSchemaRef(schema, converter)
+		transformSchemaRefOutbound(schema, converter)
 
-		if err := p.renameAndConvertProperties(parser, schema, converter); err != nil {
+		if err := p.transformSchemaPropertiesOutbound(parser, schema, converter); err != nil {
 			return nil, err
 		}
 	}
@@ -276,17 +276,17 @@ func (p *Parser) processOutboundMessages(
 	return schemas, nil
 }
 
-// convertSchemaRef converts the top-level schema reference if present.
-func convertSchemaRef(schema *spec.Schema, converter *mapping.Message) {
+// transformSchemaRefOutbound converts the top-level schema reference if present.
+func transformSchemaRefOutbound(schema *spec.Schema, converter *mapping.Message) {
 	if schema.Ref == "" {
 		return
 	}
 	schema.Ref = converter.WireOutputToOutbound(schema.Ref)
 }
 
-// renameAndConvertProperties rebuilds properties map with converted refs and
+// transformSchemaPropertiesOutbound rebuilds properties map with converted refs and
 // outbound JSON tag names.
-func (p *Parser) renameAndConvertProperties(
+func (p *Parser) transformSchemaPropertiesOutbound(
 	parser *MessageParser,
 	schema *spec.Schema,
 	converter *mapping.Message,
@@ -311,7 +311,7 @@ func (p *Parser) renameAndConvertProperties(
 			}
 		}
 
-		convertPropertyRefs(property, converter)
+		transformSchemaPropertyRefsOutbound(property, converter)
 		naming, err := mapping.NewFieldNaming(&mapping.FieldNamingOptions{
 			FieldMappingContextOptions: &mapping.FieldMappingContextOptions{
 				ProtoField:   protoField,
@@ -340,9 +340,9 @@ func (p *Parser) renameAndConvertProperties(
 	return nil
 }
 
-// convertPropertyRefs converts refs for property, its additionalProperties, and
+// transformSchemaPropertyRefsOutbound converts refs for property, its additionalProperties, and
 // items when present.
-func convertPropertyRefs(property *spec.Schema, converter *mapping.Message) {
+func transformSchemaPropertyRefsOutbound(property *spec.Schema, converter *mapping.Message) {
 	if property.Ref != "" {
 		property.Ref = converter.WireOutputToOutbound(property.Ref)
 	}
@@ -356,7 +356,7 @@ func convertPropertyRefs(property *spec.Schema, converter *mapping.Message) {
 	}
 }
 
-func schemaNeedsConversion(schema *spec.Schema) bool {
+func schemaNeedsOutboundTransform(schema *spec.Schema) bool {
 	var propertyRef bool
 	for _, property := range schema.Properties {
 		if property.Ref != "" {
@@ -392,7 +392,7 @@ func getErrorComponentsSchemas(cfg *settings.Settings) map[string]*spec.Schema {
 	}
 
 	schemas[cfg.Error.DefaultName] = &spec.Schema{
-		Type:       SchemaTypeObject.String(),
+		Type:       schemaTypeObject.String(),
 		Properties: properties,
 	}
 
@@ -404,11 +404,11 @@ func buildErrorSchema(f settings.ErrorField, acc map[string]*spec.Schema, visiti
 		return schemaRef(f.Ref)
 	}
 
-	if f.Type == SchemaTypeArray.String() {
+	if f.Type == schemaTypeArray.String() {
 		return buildErrorArraySchema(f, acc, visiting)
 	}
 
-	if f.Type == SchemaTypeObject.String() {
+	if f.Type == schemaTypeObject.String() {
 		return buildErrorObjectSchema(f, acc, visiting)
 	}
 
@@ -421,7 +421,7 @@ func isRefOnlySchema(f settings.ErrorField) bool {
 
 func buildErrorArraySchema(f settings.ErrorField, acc map[string]*spec.Schema, visiting map[string]bool) *spec.Schema {
 	s := &spec.Schema{
-		Type: SchemaTypeArray.String(),
+		Type: schemaTypeArray.String(),
 	}
 
 	if f.Items != nil {
@@ -481,7 +481,7 @@ func buildInlineObjectSchema(
 	visiting map[string]bool,
 ) *spec.Schema {
 	s := &spec.Schema{
-		Type: SchemaTypeObject.String(),
+		Type: schemaTypeObject.String(),
 	}
 
 	if len(f.Fields) > 0 {

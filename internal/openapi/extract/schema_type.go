@@ -1,62 +1,60 @@
 package extract
 
-// This should be private
-
 import (
 	descriptor "google.golang.org/protobuf/types/descriptorpb"
 
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 )
 
-// SchemaType describes the type of the schema.
-type SchemaType int
+// schemaType describes the type of the schema.
+type schemaType int
 
 // Supported schema types.
 const (
-	SchemaTypeUnspecified SchemaType = iota
-	SchemaTypeObject
-	SchemaTypeString
-	SchemaTypeArray
-	SchemaTypeBool
-	SchemaTypeInteger
-	SchemaTypeNumber
+	schemaTypeUnspecified schemaType = iota
+	schemaTypeObject
+	schemaTypeString
+	schemaTypeArray
+	schemaTypeBool
+	schemaTypeInteger
+	schemaTypeNumber
 )
 
-// SchemaTypeFromProtobufField returns the schema type for the given protobuf field.
-func SchemaTypeFromProtobufField(field *protobuf.Field) SchemaType {
+// schemaTypeFromProtobufField returns the schema type for the given protobuf field.
+func schemaTypeFromProtobufField(field *protobuf.Field) schemaType {
 	switch field.Type {
 	case descriptor.FieldDescriptorProto_TYPE_STRING:
-		return SchemaTypeString
+		return schemaTypeString
 	case descriptor.FieldDescriptorProto_TYPE_ENUM:
-		return SchemaTypeString
+		return schemaTypeString
 	case descriptor.FieldDescriptorProto_TYPE_BOOL:
-		return SchemaTypeBool
+		return schemaTypeBool
 	case descriptor.FieldDescriptorProto_TYPE_DOUBLE, descriptor.FieldDescriptorProto_TYPE_FLOAT:
-		return SchemaTypeNumber
+		return schemaTypeNumber
 	case descriptor.FieldDescriptorProto_TYPE_MESSAGE:
 		if field.IsTimestamp() {
-			return SchemaTypeString
+			return schemaTypeString
 		}
 	default:
-		return SchemaTypeInteger
+		return schemaTypeInteger
 	}
 
-	return SchemaTypeUnspecified
+	return schemaTypeUnspecified
 }
 
-func (s SchemaType) String() string {
+func (s schemaType) String() string {
 	switch s {
-	case SchemaTypeInteger:
+	case schemaTypeInteger:
 		return "integer"
-	case SchemaTypeNumber:
+	case schemaTypeNumber:
 		return "number"
-	case SchemaTypeBool:
+	case schemaTypeBool:
 		return "boolean"
-	case SchemaTypeObject:
+	case schemaTypeObject:
 		return "object"
-	case SchemaTypeString:
+	case schemaTypeString:
 		return "string"
-	case SchemaTypeArray:
+	case schemaTypeArray:
 		return "array"
 	default:
 	}

@@ -8,7 +8,7 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
 )
 
-func parseOperationSecurity(pkg *protobuf.Protobuf) []map[string][]string {
+func buildOperationSecurity(pkg *protobuf.Protobuf) []map[string][]string {
 	if extensions := lookup.LoadServiceSecurityExtensions(pkg); extensions != nil {
 		security := make([]map[string][]string, len(extensions))
 		for i, extension := range extensions {
@@ -23,7 +23,7 @@ func parseOperationSecurity(pkg *protobuf.Protobuf) []map[string][]string {
 	return nil
 }
 
-func parseComponentsSecurity(pkg *protobuf.Protobuf) map[string]*spec.Security {
+func buildComponentsSecurity(pkg *protobuf.Protobuf) map[string]*spec.Security {
 	if extensions := lookup.LoadServiceSecurityExtensions(pkg); extensions != nil {
 		security := make(map[string]*spec.Security)
 		for _, extension := range extensions {

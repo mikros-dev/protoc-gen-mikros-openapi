@@ -13,7 +13,7 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
 )
 
-func (p *Parser) parseOperationResponses(
+func (p *Parser) buildOperationResponses(
 	method *protobuf.Method,
 	converter *mapping.Message,
 ) map[string]*spec.Response {
@@ -61,10 +61,10 @@ func responseDescriptionOrDefault(code *mikros_openapi.Response) string {
 	return fmt.Sprintf("HTTP %d response", code.GetCode())
 }
 
-func (p *Parser) parseComponentsResponses() map[string]*spec.Response {
+func (p *Parser) buildComponentResponses() map[string]*spec.Response {
 	responses := make(map[string]*spec.Response)
 	for _, method := range p.pkg.Service.Methods {
-		for name, response := range p.parseMethodComponentsResponses(method) {
+		for name, response := range p.buildMethodComponentResponses(method) {
 			responses[name] = response
 		}
 	}
@@ -72,7 +72,7 @@ func (p *Parser) parseComponentsResponses() map[string]*spec.Response {
 	return responses
 }
 
-func (p *Parser) parseMethodComponentsResponses(method *protobuf.Method) map[string]*spec.Response {
+func (p *Parser) buildMethodComponentResponses(method *protobuf.Method) map[string]*spec.Response {
 	responses := make(map[string]*spec.Response)
 	for _, code := range mergedMethodResponses(method, p.cfg) {
 		if lookup.IsSuccessResponseCode(code) {
