@@ -3,11 +3,8 @@ package extract
 import (
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mapping"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
-	mikros_extensions "github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf/extensions"
 	"google.golang.org/genproto/googleapis/api/annotations"
 
-	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/openapi/lookup"
-	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
 )
@@ -53,19 +50,16 @@ func (p *Parser) collectMethodComponentsSchemas() (map[string]*spec.Schema, erro
 	)
 
 	for _, method := range p.pkg.Service.Methods {
-		reqMsg, respMsg, err := resolveReqRespMessages(method, p.pkg)
-		if err != nil {
+		methodCtx := p.buildMethodContext(method)
+		if err := p.loadMethodMessages(methodCtx); err != nil {
 			return nil, err
 		}
 
-		httpCtx := loadMethodContext(method)
-
 		// Request message schemas are collected only when the method has a body.
-		if httpRuleHasBody(httpCtx.httpRule) {
+		if httpRuleHasBody(methodCtx.httpRule) {
 			if err := p.collectRequestSchemas(
 				parser,
-				reqMsg,
-				httpCtx,
+				methodCtx,
 				schemas,
 			); err != nil {
 				return nil, err
@@ -74,8 +68,7 @@ func (p *Parser) collectMethodComponentsSchemas() (map[string]*spec.Schema, erro
 
 		if err := p.collectResponseSchemas(
 			parser,
-			respMsg,
-			httpCtx,
+			methodCtx,
 			schemas,
 		); err != nil {
 			return nil, err
@@ -83,45 +76,6 @@ func (p *Parser) collectMethodComponentsSchemas() (map[string]*spec.Schema, erro
 	}
 
 	return schemas, nil
-}
-
-// methodContext is a helper structure to hold method-specific context.
-type methodContext struct {
-	httpRule         *annotations.HttpRule
-	pathParameters   []string
-	methodExtensions *mikros_extensions.MikrosMethodExtensions
-	extensions       *mikros_openapi.OpenapiMethod
-}
-
-// loadMethodContext centralizes extraction of annotations and path params.
-func loadMethodContext(method *protobuf.Method) *methodContext {
-	httpRule := lookup.LoadHTTPRule(method)
-	pathParameters, _ := lookup.EndpointInformation(httpRule)
-
-	return &methodContext{
-		httpRule:         httpRule,
-		pathParameters:   pathParameters,
-		methodExtensions: mikros_extensions.LoadMethodExtensions(method.Proto),
-		extensions:       mikros_openapi.LoadMethodExtensions(method.Proto),
-	}
-}
-
-// resolveReqRespMessages finds request/response messages.
-func resolveReqRespMessages(
-	method *protobuf.Method,
-	pkg *protobuf.Protobuf,
-) (*protobuf.Message, *protobuf.Message, error) {
-	req, err := lookup.FindMessageByName(method.RequestType.Name, pkg)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	resp, err := lookup.FindMessageByName(method.ResponseType.Name, pkg)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return req, resp, nil
 }
 
 func httpRuleHasBody(rule *annotations.HttpRule) bool {
@@ -135,17 +89,16 @@ func httpRuleHasBody(rule *annotations.HttpRule) bool {
 // collectRequestSchemas parses, optionally processes inbound, and merges into accumulator.
 func (p *Parser) collectRequestSchemas(
 	parser *messageParser,
-	request *protobuf.Message,
-	httpCtx *methodContext,
+	methodCtx *methodContext,
 	acc map[string]*spec.Schema,
 ) error {
-	reqSchemas, err := parser.CollectMessageSchemas(request, httpCtx)
+	reqSchemas, err := parser.CollectMessageSchemas(methodCtx.requestMessage, methodCtx)
 	if err != nil {
 		return err
 	}
 
 	if p.cfg.Mikros.UseInboundMessages {
-		if httpCtx.extensions != nil && !httpCtx.extensions.GetDisableInboundProcessing() {
+		if methodCtx.extensions != nil && !methodCtx.extensions.GetDisableInboundProcessing() {
 			reqSchemas, err = p.transformSchemasInbound(parser, reqSchemas)
 			if err != nil {
 				return err
@@ -218,11 +171,10 @@ func inboundPropertyName(protoField *protobuf.Field, protoMessage *protobuf.Mess
 // needed, and merges.
 func (p *Parser) collectResponseSchemas(
 	parser *messageParser,
-	response *protobuf.Message,
-	httpCtx *methodContext,
+	methodCtx *methodContext,
 	acc map[string]*spec.Schema,
 ) error {
-	respSchemas, err := parser.CollectMessageSchemas(response, httpCtx)
+	respSchemas, err := parser.CollectMessageSchemas(methodCtx.responseMessage, methodCtx)
 	if err != nil {
 		return err
 	}

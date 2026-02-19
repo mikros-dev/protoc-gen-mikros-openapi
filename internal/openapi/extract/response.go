@@ -5,8 +5,6 @@ import (
 	"sort"
 
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mapping"
-	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
-
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/openapi/lookup"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
@@ -14,12 +12,12 @@ import (
 )
 
 func (p *Parser) buildOperationResponses(
-	method *protobuf.Method,
+	methodCtx *methodContext,
 	converter *mapping.Message,
 ) map[string]*spec.Response {
 	var (
 		responses         = make(map[string]*spec.Response)
-		successSchemaName = method.ResponseType.Name
+		successSchemaName = methodCtx.method.ResponseType.Name
 		errorName         = p.cfg.Error.DefaultName
 	)
 
@@ -27,7 +25,7 @@ func (p *Parser) buildOperationResponses(
 		successSchemaName = converter.WireOutputToOutbound(successSchemaName)
 	}
 
-	for _, code := range mergedMethodResponses(method, p.cfg) {
+	for _, code := range mergedMethodResponses(methodCtx, p.cfg) {
 		refName := refComponentsSchemas + errorName
 		if lookup.IsSuccessResponseCode(code) {
 			refName = refComponentsSchemas + successSchemaName
@@ -99,7 +97,7 @@ func (p *Parser) shouldBuildDefaultErrorComponentResponse() bool {
 	return false
 }
 
-func mergedMethodResponses(method *protobuf.Method, cfg *settings.Settings) []*mikros_openapi.Response {
+func mergedMethodResponses(methodCtx *methodContext, cfg *settings.Settings) []*mikros_openapi.Response {
 	merged := make(map[mikros_openapi.ResponseCode]*mikros_openapi.Response)
 
 	// Add the default success response
@@ -119,7 +117,7 @@ func mergedMethodResponses(method *protobuf.Method, cfg *settings.Settings) []*m
 		}
 	}
 
-	responses := lookup.LoadMethodResponseCodes(method)
+	responses := methodCtx.responseCodes
 	if hasAnySuccessResponse(responses) {
 		for code := range merged {
 			if lookup.IsSuccessResponseCode(&mikros_openapi.Response{Code: &code}) {

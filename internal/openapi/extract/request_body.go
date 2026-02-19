@@ -3,14 +3,13 @@ package extract
 import (
 	"net/http"
 
-	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
-
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/openapi/lookup"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
 )
 
-func (p *Parser) buildRequestBody(method *protobuf.Method, httpMethod string) *spec.RequestBody {
+func (p *Parser) buildRequestBody(methodCtx *methodContext) *spec.RequestBody {
+	httpMethod := methodCtx.httpMethod
 	if httpMethod != http.MethodPost && httpMethod != http.MethodPut && httpMethod != http.MethodPatch {
 		return nil
 	}
@@ -25,7 +24,7 @@ func (p *Parser) buildRequestBody(method *protobuf.Method, httpMethod string) *s
 		required = true
 	}
 
-	if extensions := lookup.LoadMessageExtensionsByName(p.pkg, method.RequestType.Name); extensions != nil {
+	if extensions := lookup.LoadMessageExtensionsByName(p.pkg, methodCtx.method.RequestType.Name); extensions != nil {
 		description = extensions.GetOperation().GetRequestBody().GetDescription()
 
 		switch extensions.GetOperation().GetRequestBody().GetType() {
@@ -42,7 +41,7 @@ func (p *Parser) buildRequestBody(method *protobuf.Method, httpMethod string) *s
 		Content: map[string]*spec.Media{
 			contentType: {
 				Schema: &spec.Schema{
-					Ref: refComponentsSchemas + method.RequestType.Name,
+					Ref: refComponentsSchemas + methodCtx.method.RequestType.Name,
 				},
 			},
 		},

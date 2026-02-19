@@ -29,10 +29,10 @@ var (
 func collectAdditionalPropertySchemas(
 	field *protobuf.Field,
 	parser *messageParser,
-	httpCtx *methodContext,
+	methodCtx *methodContext,
 ) (map[string]*spec.Schema, error) {
 	if field.MapValueTypeKind() == protoreflect.MessageKind {
-		return getMessageAdditionalSchema(field, parser, httpCtx)
+		return getMessageAdditionalSchema(field, parser, methodCtx)
 	}
 
 	if field.MapValueTypeKind() == protoreflect.EnumKind {
@@ -255,7 +255,7 @@ func enumStringsIntersection(s1, s2 string) string {
 func getMessageAdditionalSchema(
 	field *protobuf.Field,
 	parser *messageParser,
-	httpCtx *methodContext,
+	methodCtx *methodContext,
 ) (map[string]*spec.Schema, error) {
 	var (
 		packageName = lookup.GetPackageName(field.MapValueTypeName())
@@ -280,7 +280,7 @@ func getMessageAdditionalSchema(
 		return msg.Name == lookup.TrimPackageName(field.MapValueTypeName())
 	})
 	if index != -1 {
-		return parser.CollectMessageSchemas(messages[index], httpCtx)
+		return parser.CollectMessageSchemas(messages[index], methodCtx)
 	}
 
 	return nil, nil

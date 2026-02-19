@@ -1,10 +1,8 @@
 package extract
 
 import (
-	"google.golang.org/genproto/googleapis/api/annotations"
-	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
-	mikros_extensions "github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf/extensions"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mapping"
+	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/openapi/lookup"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
@@ -12,26 +10,19 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
 )
 
-func (p *Parser) collectOperationParameters(
-	method *protobuf.Method,
-	httpRule *annotations.HttpRule,
-) ([]*spec.Parameter, error) {
-	requestMessage, err := lookup.FindMethodRequestMessage(method, p.pkg)
-	if err != nil {
-		return nil, err
-	}
+func (p *Parser) collectOperationParameters(methodCtx *methodContext) ([]*spec.Parameter, error) {
+	requestMessage := methodCtx.requestMessage
 	if len(requestMessage.Fields) == 0 {
 		// No parameters
 		return nil, nil
 	}
 
 	var (
-		params            []*spec.Parameter
-		pathParameters, _ = lookup.EndpointInformation(httpRule)
+		params []*spec.Parameter
 	)
 
 	for _, field := range requestMessage.Fields {
-		parameter, info, err := p.buildOperationParameter(method, field, requestMessage, pathParameters, httpRule)
+		parameter, info, err := p.buildOperationParameter(methodCtx, field, requestMessage)
 		if err != nil {
 			return nil, err
 		}
@@ -57,18 +48,21 @@ func (p *Parser) collectOperationParameters(
 }
 
 func (p *Parser) buildOperationParameter(
-	method *protobuf.Method,
+	methodCtx *methodContext,
 	field *protobuf.Field,
 	message *protobuf.Message,
-	pathParameters []string,
-	httpRule *annotations.HttpRule,
 ) (*spec.Parameter, *metadata.SchemaInfo, error) {
 	var (
-		properties       = mikros_openapi.LoadFieldExtensions(field.Proto)
-		methodExtensions = mikros_extensions.LoadMethodExtensions(method.Proto)
-		location         = lookup.FieldLocation(properties, httpRule, methodExtensions, field.Name, pathParameters)
-		name             = field.Name
-		description      string
+		properties = mikros_openapi.LoadFieldExtensions(field.Proto)
+		location   = lookup.FieldLocation(
+			properties,
+			methodCtx.httpRule,
+			methodCtx.methodExtensions,
+			field.Name,
+			methodCtx.pathParameters,
+		)
+		name        = field.Name
+		description string
 	)
 
 	if p.cfg.Mikros.UseInboundMessages {

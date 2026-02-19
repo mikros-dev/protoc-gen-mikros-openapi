@@ -21,7 +21,7 @@ type messageParser struct {
 // CollectMessageSchemas builds OpenAPI schemas from a Protobuf message.
 func (m *messageParser) CollectMessageSchemas(
 	message *protobuf.Message,
-	httpCtx *methodContext,
+	methodCtx *methodContext,
 ) (map[string]*spec.Schema, error) {
 	var (
 		schemas            = make(map[string]*spec.Schema)
@@ -37,7 +37,7 @@ func (m *messageParser) CollectMessageSchemas(
 			continue
 		}
 
-		isRequired, err := m.processField(f, ext, httpCtx, message, schemas, props)
+		isRequired, err := m.processField(f, ext, methodCtx, message, schemas, props)
 		if err != nil {
 			return nil, err
 		}
@@ -104,19 +104,19 @@ func (m *messageParser) addParsedMessage(name string) {
 func (m *messageParser) processField(
 	field *protobuf.Field,
 	ext *mikros_openapi.Property,
-	httpCtx *methodContext,
+	methodCtx *methodContext,
 	message *protobuf.Message,
 	schemas, props map[string]*spec.Schema,
 ) (bool, error) {
 	if shouldHandleChildMessage(field) {
-		return m.handleChildField(field, httpCtx, schemas, props)
+		return m.handleChildField(field, methodCtx, schemas, props)
 	}
 
-	if m.shouldSkipNonBodyField(ext, httpCtx, field.Name, message.ModuleName) {
+	if m.shouldSkipNonBodyField(ext, methodCtx, field.Name, message.ModuleName) {
 		return false, nil
 	}
 
-	return m.handleRegularField(field, ext, httpCtx, schemas, props)
+	return m.handleRegularField(field, ext, methodCtx, schemas, props)
 }
 
 func (m *messageParser) shouldSkipField(ext *mikros_openapi.Property) bool {
@@ -138,10 +138,10 @@ func shouldHandleChildMessage(field *protobuf.Field) bool {
 
 func (m *messageParser) handleChildField(
 	field *protobuf.Field,
-	httpCtx *methodContext,
+	methodCtx *methodContext,
 	schemas, props map[string]*spec.Schema,
 ) (bool, error) {
-	if err := m.collectChildSchemas(field, httpCtx, schemas); err != nil {
+	if err := m.collectChildSchemas(field, methodCtx, schemas); err != nil {
 		return false, err
 	}
 
@@ -154,7 +154,7 @@ func (m *messageParser) handleChildField(
 
 func (m *messageParser) collectChildSchemas(
 	field *protobuf.Field,
-	httpCtx *methodContext,
+	methodCtx *methodContext,
 	schemas map[string]*spec.Schema,
 ) error {
 	if m.isMessageAlreadyParsed(lookup.TrimPackageName(field.TypeName)) {
@@ -169,7 +169,7 @@ func (m *messageParser) collectChildSchemas(
 		return nil
 	}
 
-	cs, err := m.CollectMessageSchemas(child, httpCtx)
+	cs, err := m.CollectMessageSchemas(child, methodCtx)
 	if err != nil {
 		return err
 	}
@@ -220,17 +220,24 @@ func (m *messageParser) newRefSchema(
 
 func (m *messageParser) shouldSkipNonBodyField(
 	ext *mikros_openapi.Property,
-	httpCtx *methodContext,
+	methodCtx *methodContext,
 	fieldName, messageModule string,
 ) bool {
-	loc := lookup.FieldLocation(ext, httpCtx.httpRule, httpCtx.methodExtensions, fieldName, httpCtx.pathParameters)
+	loc := lookup.FieldLocation(
+		ext,
+		methodCtx.httpRule,
+		methodCtx.methodExtensions,
+		fieldName,
+		methodCtx.pathParameters,
+	)
+
 	return loc != "body" && m.pkg.ModuleName == messageModule
 }
 
 func (m *messageParser) handleRegularField(
 	field *protobuf.Field,
 	ext *mikros_openapi.Property,
-	httpCtx *methodContext,
+	methodCtx *methodContext,
 	schemas, props map[string]*spec.Schema,
 ) (bool, error) {
 	name := overrideName(ext, field.Name)
@@ -242,7 +249,7 @@ func (m *messageParser) handleRegularField(
 		return isFieldRequired(field), nil
 	}
 
-	additional, err := collectAdditionalPropertySchemas(field, m, httpCtx)
+	additional, err := collectAdditionalPropertySchemas(field, m, methodCtx)
 	if err != nil {
 		return false, err
 	}

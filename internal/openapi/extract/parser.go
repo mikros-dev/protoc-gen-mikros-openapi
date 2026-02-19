@@ -1,10 +1,8 @@
 package extract
 
 import (
-	"fmt"
 	"strings"
 
-	"github.com/iancoleman/strcase"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mapping"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 
@@ -139,7 +137,9 @@ func (p *Parser) collectPathItems() (map[string]map[string]*spec.Operation, map[
 	)
 
 	for _, method := range p.pkg.Service.Methods {
-		operation, info, err := p.buildOperation(method, converter)
+		methodCtx := p.buildMethodContext(method)
+
+		operation, info, err := p.buildOperation(methodCtx, converter)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -164,41 +164,38 @@ func (p *Parser) collectPathItems() (map[string]map[string]*spec.Operation, map[
 }
 
 func (p *Parser) buildOperation(
-	method *protobuf.Method,
+	methodCtx *methodContext,
 	converter *mapping.Message,
 ) (*spec.Operation, *metadata.OperationInfo, error) {
-	httpRule := lookup.LoadHTTPRule(method)
-	if httpRule == nil {
+	if methodCtx.httpRule == nil {
 		// The endpoint settings of an RPC are mandatory. It does not make
 		// sense to continue if they are not defined.
 		return nil, nil, nil
 	}
 
-	endpoint, m := lookup.HTTPEndpoint(httpRule)
-	if p.cfg.AddServiceNameInEndpoints {
-		endpoint = fmt.Sprintf("/%v%v", strcase.ToKebab(p.pkg.ModuleName), endpoint)
+	if err := p.loadMethodMessages(methodCtx); err != nil {
+		return nil, nil, err
 	}
 
 	var (
-		summary     = method.Name
+		summary     = methodCtx.method.Name
 		description = ""
 		tags        = []string{
 			p.pkg.ModuleName,
 		}
 	)
 
-	extensions := mikros_openapi.LoadMethodExtensions(method.Proto)
-	if extensions != nil {
-		if extensions.GetSummary() != "" {
-			summary = extensions.GetSummary()
+	if methodCtx.extensions != nil {
+		if methodCtx.extensions.GetSummary() != "" {
+			summary = methodCtx.extensions.GetSummary()
 		}
-		if len(extensions.GetTags()) > 0 {
-			tags = extensions.GetTags()
+		if len(methodCtx.extensions.GetTags()) > 0 {
+			tags = methodCtx.extensions.GetTags()
 		}
-		description = extensions.GetDescription()
+		description = methodCtx.extensions.GetDescription()
 	}
 
-	parameters, err := p.collectOperationParameters(method, httpRule)
+	parameters, err := p.collectOperationParameters(methodCtx)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -206,16 +203,16 @@ func (p *Parser) buildOperation(
 	return &spec.Operation{
 			Summary:         summary,
 			Description:     description,
-			ID:              method.Name,
+			ID:              methodCtx.method.Name,
 			Tags:            tags,
 			Parameters:      parameters,
-			Responses:       p.buildOperationResponses(method, converter),
-			RequestBody:     p.buildRequestBody(method, m),
+			Responses:       p.buildOperationResponses(methodCtx, converter),
+			RequestBody:     p.buildRequestBody(methodCtx),
 			SecuritySchemes: buildOperationSecurity(p.pkg),
 		}, &metadata.OperationInfo{
-			Method:     m,
-			Endpoint:   endpoint,
-			Descriptor: method.Proto,
+			Method:     methodCtx.httpMethod,
+			Endpoint:   methodCtx.endpoint,
+			Descriptor: methodCtx.method.Proto,
 		}, nil
 }
 
