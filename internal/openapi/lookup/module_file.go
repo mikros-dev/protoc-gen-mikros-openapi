@@ -4,8 +4,9 @@ import (
 	"fmt"
 
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
-	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
 	"google.golang.org/protobuf/compiler/protogen"
+
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
 )
 
 // FindMainModuleFile returns the main module file for the given protobuf package.
