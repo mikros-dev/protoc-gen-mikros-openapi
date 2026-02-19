@@ -24,11 +24,11 @@ var (
 	}
 )
 
-// GetAdditionalPropertySchemas returns additional properties schemas for the
+// collectAdditionalPropertySchemas returns additional properties schemas for the
 // field.
-func GetAdditionalPropertySchemas(
+func collectAdditionalPropertySchemas(
 	field *protobuf.Field,
-	parser *MessageParser,
+	parser *messageParser,
 	httpCtx *methodContext,
 ) (map[string]*spec.Schema, error) {
 	if field.MapValueTypeKind() == protoreflect.MessageKind {
@@ -45,19 +45,28 @@ func GetAdditionalPropertySchemas(
 }
 
 func buildSchemaFromField(field *protobuf.Field, pkg *protobuf.Protobuf, cfg *settings.Settings) *spec.Schema {
-	var (
-		properties = mikros_openapi.LoadFieldExtensions(field.Proto)
-		schema     = &spec.Schema{
-			Type: schemaTypeFromProtobufField(field).String(),
-		}
-	)
+	schema := buildBaseSchema(field)
 
-	if properties != nil {
-		schema.Example = properties.GetExample()
-		schema.Description = properties.GetDescription()
-		schema.Format = protoFormatToSchemaFormat(properties.GetFormat())
+	applyProtobufSpecialCases(schema, field, pkg, cfg)
+	applyFieldExtensionOverrides(schema, field)
+	applyContainerShape(schema, field)
+	normalizeSchemaInvariants(schema, field)
+
+	return schema
+}
+
+func buildBaseSchema(field *protobuf.Field) *spec.Schema {
+	return &spec.Schema{
+		Type: schemaTypeFromProtobufField(field).String(),
 	}
+}
 
+func applyProtobufSpecialCases(
+	schema *spec.Schema,
+	field *protobuf.Field,
+	pkg *protobuf.Protobuf,
+	cfg *settings.Settings,
+) {
 	if field.IsTimestamp() {
 		// Timestamps are always formatted as date-time.
 		schema.Format = "date-time"
@@ -67,13 +76,11 @@ func buildSchemaFromField(field *protobuf.Field, pkg *protobuf.Protobuf, cfg *se
 		schema.Enum = getEnumValues(field, pkg, cfg)
 	}
 
-	// metadata
 	if field.IsProtoStruct() {
 		schema.Type = schemaTypeObject.String()
 		schema.AdditionalProperties = &spec.Schema{}
 	}
 
-	// interface
 	if field.IsProtoValue() {
 		schema.Type = schemaTypeObject.String()
 		for _, t := range supportedSchemas {
@@ -82,7 +89,26 @@ func buildSchemaFromField(field *protobuf.Field, pkg *protobuf.Protobuf, cfg *se
 			})
 		}
 	}
+}
 
+func applyFieldExtensionOverrides(schema *spec.Schema, field *protobuf.Field) {
+	properties := mikros_openapi.LoadFieldExtensions(field.Proto)
+	if properties == nil {
+		return
+	}
+
+	schema.Example = properties.GetExample()
+	schema.Description = properties.GetDescription()
+
+	format := protoFormatToSchemaFormat(properties.GetFormat())
+	if format == "" {
+		return
+	}
+
+	schema.Format = format
+}
+
+func applyContainerShape(schema *spec.Schema, field *protobuf.Field) {
 	if field.IsMap() {
 		// Map should always have keys as string, because JSON does not support
 		// other types as keys.
@@ -90,16 +116,25 @@ func buildSchemaFromField(field *protobuf.Field, pkg *protobuf.Protobuf, cfg *se
 		schema.AdditionalProperties = getMapSchema(field)
 	}
 
-	if field.IsArray() {
-		schema.Type = schemaTypeArray.String()
-		if schema.Items == nil {
-			schema.Items = &spec.Schema{
-				Type: schemaTypeFromProtobufField(field).String(),
-			}
-		}
+	if !field.IsArray() {
+		return
 	}
 
-	return schema
+	schema.Type = schemaTypeArray.String()
+}
+
+func normalizeSchemaInvariants(schema *spec.Schema, field *protobuf.Field) {
+	if schema.Type != schemaTypeArray.String() {
+		return
+	}
+
+	if schema.Items != nil {
+		return
+	}
+
+	schema.Items = &spec.Schema{
+		Type: schemaTypeFromProtobufField(field).String(),
+	}
 }
 
 func protoFormatToSchemaFormat(format mikros_openapi.PropertyFormat) string {
@@ -219,7 +254,7 @@ func enumStringsIntersection(s1, s2 string) string {
 
 func getMessageAdditionalSchema(
 	field *protobuf.Field,
-	parser *MessageParser,
+	parser *messageParser,
 	httpCtx *methodContext,
 ) (map[string]*spec.Schema, error) {
 	var (

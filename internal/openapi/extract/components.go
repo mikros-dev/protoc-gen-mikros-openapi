@@ -46,7 +46,7 @@ func (p *Parser) collectComponentsSchemas() (map[string]*spec.Schema, error) {
 func (p *Parser) collectMethodComponentsSchemas() (map[string]*spec.Schema, error) {
 	var (
 		schemas = make(map[string]*spec.Schema)
-		parser  = &MessageParser{
+		parser  = &messageParser{
 			pkg: p.pkg,
 			cfg: p.cfg,
 		}
@@ -134,7 +134,7 @@ func httpRuleHasBody(rule *annotations.HttpRule) bool {
 
 // collectRequestSchemas parses, optionally processes inbound, and merges into accumulator.
 func (p *Parser) collectRequestSchemas(
-	parser *MessageParser,
+	parser *messageParser,
 	request *protobuf.Message,
 	httpCtx *methodContext,
 	acc map[string]*spec.Schema,
@@ -158,7 +158,7 @@ func (p *Parser) collectRequestSchemas(
 }
 
 func (p *Parser) transformSchemasInbound(
-	parser *MessageParser,
+	parser *messageParser,
 	schemas map[string]*spec.Schema,
 ) (map[string]*spec.Schema, error) {
 	for _, schema := range schemas {
@@ -188,7 +188,7 @@ func (p *Parser) transformSchemasInbound(
 	return schemas, nil
 }
 
-func (p *Parser) resolveProtoField(parser *MessageParser, property *spec.Schema) *protobuf.Field {
+func (p *Parser) resolveProtoField(parser *messageParser, property *spec.Schema) *protobuf.Field {
 	if info, ok := p.getSchemaInfo(property); ok && info.ProtoField != nil {
 		return info.ProtoField
 	}
@@ -217,7 +217,7 @@ func inboundPropertyName(protoField *protobuf.Field, protoMessage *protobuf.Mess
 // collectResponseSchemas parses, optionally processes outbound, renames when
 // needed, and merges.
 func (p *Parser) collectResponseSchemas(
-	parser *MessageParser,
+	parser *messageParser,
 	response *protobuf.Message,
 	httpCtx *methodContext,
 	acc map[string]*spec.Schema,
@@ -257,7 +257,7 @@ func mergeSchemas(dst, src map[string]*spec.Schema, keyTransform func(string) st
 }
 
 func (p *Parser) transformSchemasOutbound(
-	parser *MessageParser,
+	parser *messageParser,
 	schemas map[string]*spec.Schema,
 	converter *mapping.Message,
 ) (map[string]*spec.Schema, error) {
@@ -287,7 +287,7 @@ func transformSchemaRefOutbound(schema *spec.Schema, converter *mapping.Message)
 // transformSchemaPropertiesOutbound rebuilds properties map with converted refs and
 // outbound JSON tag names.
 func (p *Parser) transformSchemaPropertiesOutbound(
-	parser *MessageParser,
+	parser *messageParser,
 	schema *spec.Schema,
 	converter *mapping.Message,
 ) error {

@@ -62,25 +62,13 @@ func responseDescriptionOrDefault(code *mikros_openapi.Response) string {
 }
 
 func (p *Parser) buildComponentResponses() map[string]*spec.Response {
-	responses := make(map[string]*spec.Response)
-	for _, method := range p.pkg.Service.Methods {
-		for name, response := range p.buildMethodComponentResponses(method) {
-			responses[name] = response
-		}
+	if !p.shouldBuildDefaultErrorComponentResponse() {
+		return nil
 	}
 
-	return responses
-}
-
-func (p *Parser) buildMethodComponentResponses(method *protobuf.Method) map[string]*spec.Response {
-	responses := make(map[string]*spec.Response)
-	for _, code := range mergedMethodResponses(method, p.cfg) {
-		if lookup.IsSuccessResponseCode(code) {
-			continue
-		}
-
-		errorName := p.cfg.Error.DefaultName
-		responses[errorName] = &spec.Response{
+	errorName := p.cfg.Error.DefaultName
+	return map[string]*spec.Response{
+		errorName: {
 			Description: p.cfg.Error.DefaultDescription,
 			Content: map[string]*spec.Media{
 				"application/json": {
@@ -89,10 +77,26 @@ func (p *Parser) buildMethodComponentResponses(method *protobuf.Method) map[stri
 					},
 				},
 			},
+		},
+	}
+}
+
+func (p *Parser) shouldBuildDefaultErrorComponentResponse() bool {
+	if len(p.cfg.Error.Responses) > 0 {
+		return true
+	}
+
+	for _, method := range p.pkg.Service.Methods {
+		for _, code := range lookup.LoadMethodResponseCodes(method) {
+			if lookup.IsSuccessResponseCode(code) {
+				continue
+			}
+
+			return true
 		}
 	}
 
-	return responses
+	return false
 }
 
 func mergedMethodResponses(method *protobuf.Method, cfg *settings.Settings) []*mikros_openapi.Response {
