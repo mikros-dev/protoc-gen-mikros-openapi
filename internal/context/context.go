@@ -7,6 +7,7 @@ import (
 	"google.golang.org/protobuf/compiler/protogen"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/metadata"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
 )
@@ -16,7 +17,7 @@ import (
 type Context struct {
 	Openapi  *spec.Openapi
 	Settings *settings.Settings
-	Metadata spec.Metadata
+	Metadata metadata.Metadata
 }
 
 // BuildContext builds the main context for the OpenAPI generation.

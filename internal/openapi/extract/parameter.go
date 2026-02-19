@@ -9,6 +9,7 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mapping"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/openapi/lookup"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/metadata"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
 )
 
@@ -62,7 +63,7 @@ func (p *Parser) parseOperationParameter(
 	message *protobuf.Message,
 	pathParameters []string,
 	httpRule *annotations.HttpRule,
-) (*spec.Parameter, *spec.SchemaInfo, error) {
+) (*spec.Parameter, *metadata.SchemaInfo, error) {
 	var (
 		properties       = mikros_openapi.LoadFieldExtensions(field.Proto)
 		methodExtensions = mikros_extensions.LoadMethodExtensions(method.Proto)
@@ -95,7 +96,7 @@ func (p *Parser) parseOperationParameter(
 			Name:        name,
 			Description: description,
 			Schema:      newSchemaFromProtobufField(field, p.pkg, p.cfg),
-		}, &spec.SchemaInfo{
+		}, &metadata.SchemaInfo{
 			FieldDescriptor:   field.Proto,
 			MessageDescriptor: nil, // I think this will be unnecessary
 		}, nil

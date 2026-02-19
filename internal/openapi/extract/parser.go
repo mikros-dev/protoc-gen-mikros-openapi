@@ -9,8 +9,9 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/openapi/lookup"
-	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/openapi/metadata"
+	metadata_builder "github.com/mikros-dev/protoc-gen-mikros-openapi/internal/openapi/metadata"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/metadata"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
 )
@@ -31,7 +32,7 @@ type Parser struct {
 }
 
 type schemaInfo struct {
-	Info       *spec.SchemaInfo
+	Info       *metadata.SchemaInfo
 	ProtoField *protobuf.Field
 }
 
@@ -45,7 +46,7 @@ func NewParser(pkg *protobuf.Protobuf, cfg *settings.Settings) *Parser {
 }
 
 // Parse parses the protobuf file into an OpenAPI specification.
-func (p *Parser) Parse() (*spec.Openapi, spec.Metadata, error) {
+func (p *Parser) Parse() (*spec.Openapi, metadata.Metadata, error) {
 	info, err := p.parseInfo()
 	if err != nil {
 		return nil, nil, err
@@ -72,7 +73,7 @@ func (p *Parser) Parse() (*spec.Openapi, spec.Metadata, error) {
 			Servers:    servers,
 			PathItems:  pathItems,
 			Components: components,
-		}, metadata.New(metadata.Options{
+		}, metadata_builder.New(metadata_builder.Options{
 			ModuleName:    p.pkg.ModuleName,
 			OperationInfo: operationInfo,
 			SchemaInfo:    p.getMetaSchemaInfo(),
@@ -128,10 +129,10 @@ func (p *Parser) parseServers() ([]*spec.Server, error) {
 	return servers, nil
 }
 
-func (p *Parser) parsePathItems() (map[string]map[string]*spec.Operation, map[string]*spec.OperationInfo, error) {
+func (p *Parser) parsePathItems() (map[string]map[string]*spec.Operation, map[string]*metadata.OperationInfo, error) {
 	var (
 		pathItems     = make(map[string]map[string]*spec.Operation)
-		operationInfo = make(map[string]*spec.OperationInfo)
+		operationInfo = make(map[string]*metadata.OperationInfo)
 		converter     = mapping.NewMessage(mapping.MessageOptions{
 			Settings: p.cfg.MikrosSettings,
 		})
@@ -165,7 +166,7 @@ func (p *Parser) parsePathItems() (map[string]map[string]*spec.Operation, map[st
 func (p *Parser) parseOperation(
 	method *protobuf.Method,
 	converter *mapping.Message,
-) (*spec.Operation, *spec.OperationInfo, error) {
+) (*spec.Operation, *metadata.OperationInfo, error) {
 	httpRule := lookup.LoadHTTPRule(method)
 	if httpRule == nil {
 		// The endpoint settings of an RPC are mandatory. It does not make
@@ -211,7 +212,7 @@ func (p *Parser) parseOperation(
 			Responses:       p.parseOperationResponses(method, converter),
 			RequestBody:     p.parseRequestBody(method, m),
 			SecuritySchemes: parseOperationSecurity(p.pkg),
-		}, &spec.OperationInfo{
+		}, &metadata.OperationInfo{
 			Method:     m,
 			Endpoint:   endpoint,
 			Descriptor: method.Proto,
@@ -223,8 +224,8 @@ func (p *Parser) getSchemaInfo(schema *spec.Schema) (*schemaInfo, bool) {
 	return info, ok
 }
 
-func (p *Parser) getMetaSchemaInfo() map[*spec.Schema]*spec.SchemaInfo {
-	meta := make(map[*spec.Schema]*spec.SchemaInfo)
+func (p *Parser) getMetaSchemaInfo() map[*spec.Schema]*metadata.SchemaInfo {
+	meta := make(map[*spec.Schema]*metadata.SchemaInfo)
 	for schema, info := range p.schemas {
 		meta[schema] = info.Info
 	}

@@ -7,6 +7,7 @@ import (
 	"google.golang.org/protobuf/compiler/protogen"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/openapi/extract"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/metadata"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
 )
@@ -17,11 +18,14 @@ import (
 //
 // It requires previously loading the mikros-openapi plugin settings so
 // it can properly translate to the desired specification.
+//
+// When (nil, nil, nil) is returned, the protobuf package being processed
+// does not represent a valid HTTP service, this it is skipped.
 func FromProto(
 	_ context.Context,
 	plugin *protogen.Plugin,
 	cfg *settings.Settings,
-) (*spec.Openapi, spec.Metadata, error) {
+) (*spec.Openapi, metadata.Metadata, error) {
 	pkg, err := protobuf.Parse(protobuf.ParseOptions{
 		Plugin: plugin,
 	})

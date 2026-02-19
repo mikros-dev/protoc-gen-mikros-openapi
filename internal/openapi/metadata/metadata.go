@@ -1,21 +1,22 @@
 package metadata
 
 import (
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/metadata"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
 )
 
 // Metadata holds the metadata for the OpenAPI specification.
 type Metadata struct {
 	moduleName    string
-	operationInfo map[string]*spec.OperationInfo
-	schemaInfo    map[*spec.Schema]*spec.SchemaInfo
+	operationInfo map[string]*metadata.OperationInfo
+	schemaInfo    map[*spec.Schema]*metadata.SchemaInfo
 }
 
 // Options holds the options for the Metadata instance.
 type Options struct {
 	ModuleName    string
-	OperationInfo map[string]*spec.OperationInfo
-	SchemaInfo    map[*spec.Schema]*spec.SchemaInfo
+	OperationInfo map[string]*metadata.OperationInfo
+	SchemaInfo    map[*spec.Schema]*metadata.SchemaInfo
 }
 
 // New creates a new Metadata instance.
@@ -33,13 +34,13 @@ func (m *Metadata) ModuleName() string {
 }
 
 // OperationInfo returns the operation info for the given operation ID.
-func (m *Metadata) OperationInfo(operationID string) (*spec.OperationInfo, bool) {
+func (m *Metadata) OperationInfo(operationID string) (*metadata.OperationInfo, bool) {
 	info, ok := m.operationInfo[operationID]
 	return info, ok
 }
 
 // SchemaInfo returns the schema info for the given schema.
-func (m *Metadata) SchemaInfo(schema *spec.Schema) (*spec.SchemaInfo, bool) {
+func (m *Metadata) SchemaInfo(schema *spec.Schema) (*metadata.SchemaInfo, bool) {
 	info, ok := m.schemaInfo[schema]
 	return info, ok
 }

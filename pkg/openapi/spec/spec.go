@@ -58,7 +58,7 @@ type RequestBody struct {
 
 // Media describes a media type.
 type Media struct {
-	Schema *Schema `json:"schema,omitempty"`
+	Schema *Schema `yaml:"schema,omitempty"`
 }
 
 // Schema represents a swagger schema of a field/parameter/object.
