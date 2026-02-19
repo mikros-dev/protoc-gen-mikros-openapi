@@ -1,6 +1,8 @@
 package extract
 
 import (
+	"fmt"
+
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mapping"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 	"google.golang.org/genproto/googleapis/api/annotations"
@@ -115,27 +117,20 @@ func (p *Parser) transformSchemasInbound(
 	schemas map[string]*spec.Schema,
 ) (map[string]*spec.Schema, error) {
 	for _, schema := range schemas {
-		if len(schema.Properties) == 0 {
-			continue
+		err := transformSchema(schema, transformRules{
+			TransformPropertyName: func(parent *spec.Schema, _ string, property *spec.Schema) (string, error) {
+				protoMessage, ok := parser.GetMessageProtobuf(parent)
+				if !ok {
+					return "", fmt.Errorf("failed to get proto message for schema %s", parent.Ref)
+				}
+
+				protoField := p.resolveProtoField(parser, property)
+				return inboundPropertyName(protoField, protoMessage)
+			},
+		})
+		if err != nil {
+			return nil, err
 		}
-
-		var (
-			properties      = make(map[string]*spec.Schema)
-			protoMessage, _ = parser.GetMessageProtobuf(schema)
-		)
-
-		for _, property := range schema.Properties {
-			protoField := p.resolveProtoField(parser, property)
-
-			inboundName, err := inboundPropertyName(protoField, protoMessage)
-			if err != nil {
-				return nil, err
-			}
-
-			properties[inboundName] = property
-		}
-
-		schema.Properties = properties
 	}
 
 	return schemas, nil
@@ -214,13 +209,19 @@ func (p *Parser) transformSchemasOutbound(
 	converter *mapping.Message,
 ) (map[string]*spec.Schema, error) {
 	for _, schema := range schemas {
-		if !schemaNeedsOutboundTransform(schema) {
-			continue
-		}
+		err := transformSchema(schema, transformRules{
+			TransformRef: converter.WireOutputToOutbound,
+			TransformPropertyName: func(parent *spec.Schema, _ string, property *spec.Schema) (string, error) {
+				protoMessage, ok := parser.GetMessageProtobuf(parent)
+				if !ok {
+					return "", fmt.Errorf("failed to get proto message for schema %s", parent.Ref)
+				}
 
-		transformSchemaRefOutbound(schema, converter)
-
-		if err := p.transformSchemaPropertiesOutbound(parser, schema, converter); err != nil {
+				protoField := p.resolveProtoField(parser, property)
+				return outboundPropertyName(protoField, protoMessage)
+			},
+		})
+		if err != nil {
 			return nil, err
 		}
 	}
@@ -228,106 +229,29 @@ func (p *Parser) transformSchemasOutbound(
 	return schemas, nil
 }
 
-// transformSchemaRefOutbound converts the top-level schema reference if present.
-func transformSchemaRefOutbound(schema *spec.Schema, converter *mapping.Message) {
-	if schema.Ref == "" {
-		return
-	}
-	schema.Ref = converter.WireOutputToOutbound(schema.Ref)
-}
-
-// transformSchemaPropertiesOutbound rebuilds properties map with converted refs and
-// outbound JSON tag names.
-func (p *Parser) transformSchemaPropertiesOutbound(
-	parser *messageParser,
-	schema *spec.Schema,
-	converter *mapping.Message,
-) error {
-	if len(schema.Properties) == 0 {
-		return nil
+func outboundPropertyName(protoField *protobuf.Field, protoMessage *protobuf.Message) (string, error) {
+	naming, err := mapping.NewFieldNaming(&mapping.FieldNamingOptions{
+		FieldMappingContextOptions: &mapping.FieldMappingContextOptions{
+			ProtoField:   protoField,
+			ProtoMessage: protoMessage,
+		},
+	})
+	if err != nil {
+		return "", err
 	}
 
-	var (
-		protoMessage, _ = parser.GetMessageProtobuf(schema)
-		properties      = make(map[string]*spec.Schema)
-	)
-
-	for _, property := range schema.Properties {
-		var protoField *protobuf.Field
-		if info, ok := p.getSchemaInfo(property); ok {
-			protoField = info.ProtoField
-		}
-		if protoField == nil {
-			if f, ok := parser.GetFieldProtobuf(property); ok {
-				protoField = f
-			}
-		}
-
-		transformSchemaPropertyRefsOutbound(property, converter)
-		naming, err := mapping.NewFieldNaming(&mapping.FieldNamingOptions{
-			FieldMappingContextOptions: &mapping.FieldMappingContextOptions{
-				ProtoField:   protoField,
-				ProtoMessage: protoMessage,
-			},
-		})
-		if err != nil {
-			return err
-		}
-
-		fieldTag, err := mapping.NewFieldTag(&mapping.FieldTagOptions{
-			FieldNaming: naming,
-			FieldMappingContextOptions: &mapping.FieldMappingContextOptions{
-				ProtoField:   protoField,
-				ProtoMessage: protoMessage,
-			},
-		})
-		if err != nil {
-			return err
-		}
-
-		properties[fieldTag.OutboundTagFieldName()] = property
+	fieldTag, err := mapping.NewFieldTag(&mapping.FieldTagOptions{
+		FieldNaming: naming,
+		FieldMappingContextOptions: &mapping.FieldMappingContextOptions{
+			ProtoField:   protoField,
+			ProtoMessage: protoMessage,
+		},
+	})
+	if err != nil {
+		return "", err
 	}
 
-	schema.Properties = properties
-	return nil
-}
-
-// transformSchemaPropertyRefsOutbound converts refs for property, its additionalProperties, and
-// items when present.
-func transformSchemaPropertyRefsOutbound(property *spec.Schema, converter *mapping.Message) {
-	if property.Ref != "" {
-		property.Ref = converter.WireOutputToOutbound(property.Ref)
-	}
-
-	if property.AdditionalProperties != nil && property.AdditionalProperties.Ref != "" {
-		property.AdditionalProperties.Ref = converter.WireOutputToOutbound(property.AdditionalProperties.Ref)
-	}
-
-	if property.Items != nil && property.Items.Ref != "" {
-		property.Items.Ref = converter.WireOutputToOutbound(property.Items.Ref)
-	}
-}
-
-func schemaNeedsOutboundTransform(schema *spec.Schema) bool {
-	var propertyRef bool
-	for _, property := range schema.Properties {
-		if property.Ref != "" {
-			propertyRef = true
-			break
-		}
-
-		if property.AdditionalProperties != nil && property.AdditionalProperties.Ref != "" {
-			propertyRef = true
-			break
-		}
-
-		if property.Items != nil && property.Items.Ref != "" {
-			propertyRef = true
-			break
-		}
-	}
-
-	return schema.Ref != "" || propertyRef
+	return fieldTag.OutboundTagFieldName(), nil
 }
 
 // getErrorComponentsSchemas will return the default error schema and any named
