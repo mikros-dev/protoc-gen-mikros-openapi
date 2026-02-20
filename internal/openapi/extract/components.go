@@ -1,7 +1,7 @@
 package extract
 
 import (
-	"fmt"
+	"strings"
 
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mapping"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
@@ -118,10 +118,10 @@ func (p *Parser) transformSchemasInbound(
 ) (map[string]*spec.Schema, error) {
 	for _, schema := range schemas {
 		err := transformSchema(schema, transformRules{
-			TransformPropertyName: func(parent *spec.Schema, _ string, property *spec.Schema) (string, error) {
+			TransformPropertyName: func(parent *spec.Schema, name string, property *spec.Schema) (string, error) {
 				protoMessage, ok := parser.GetMessageProtobuf(parent)
 				if !ok {
-					return "", fmt.Errorf("failed to get proto message for schema %s", parent.Ref)
+					return name, nil
 				}
 
 				protoField := p.resolveProtoField(parser, property)
@@ -208,13 +208,23 @@ func (p *Parser) transformSchemasOutbound(
 	schemas map[string]*spec.Schema,
 	converter *mapping.Message,
 ) (map[string]*spec.Schema, error) {
+	transformRef := func(ref string) string {
+		if strings.HasPrefix(ref, refComponentsSchemas) {
+			name := strings.TrimPrefix(ref, refComponentsSchemas)
+			return refComponentsSchemas + converter.WireOutputToOutbound(name)
+		}
+
+		// With an unknown ref shape we don't risk corrupting it
+		return ref
+	}
+
 	for _, schema := range schemas {
 		err := transformSchema(schema, transformRules{
-			TransformRef: converter.WireOutputToOutbound,
-			TransformPropertyName: func(parent *spec.Schema, _ string, property *spec.Schema) (string, error) {
+			TransformRef: transformRef,
+			TransformPropertyName: func(parent *spec.Schema, name string, property *spec.Schema) (string, error) {
 				protoMessage, ok := parser.GetMessageProtobuf(parent)
 				if !ok {
-					return "", fmt.Errorf("failed to get proto message for schema %s", parent.Ref)
+					return name, nil
 				}
 
 				protoField := p.resolveProtoField(parser, property)

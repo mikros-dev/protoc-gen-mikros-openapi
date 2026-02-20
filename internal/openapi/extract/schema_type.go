@@ -1,8 +1,8 @@
 package extract
 
 import (
-	descriptor "google.golang.org/protobuf/types/descriptorpb"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
+	descriptor "google.golang.org/protobuf/types/descriptorpb"
 )
 
 // schemaType describes the type of the schema.
@@ -22,7 +22,7 @@ const (
 // schemaTypeFromProtobufField returns the schema type for the given protobuf field.
 func schemaTypeFromProtobufField(field *protobuf.Field) schemaType {
 	switch field.Type {
-	case descriptor.FieldDescriptorProto_TYPE_STRING:
+	case descriptor.FieldDescriptorProto_TYPE_STRING, descriptor.FieldDescriptorProto_TYPE_BYTES:
 		return schemaTypeString
 	case descriptor.FieldDescriptorProto_TYPE_ENUM:
 		return schemaTypeString
@@ -34,11 +34,12 @@ func schemaTypeFromProtobufField(field *protobuf.Field) schemaType {
 		if field.IsTimestamp() {
 			return schemaTypeString
 		}
+
+		// Messages will always default to object types.
+		return schemaTypeObject
 	default:
 		return schemaTypeInteger
 	}
-
-	return schemaTypeUnspecified
 }
 
 func (s schemaType) String() string {
