@@ -31,5 +31,6 @@ type OperationInfo struct {
 
 // SchemaInfo contains information about a given schema.
 type SchemaInfo struct {
+	IsRequired        bool
 	FieldDescriptor   *descriptorpb.FieldDescriptorProto
 }

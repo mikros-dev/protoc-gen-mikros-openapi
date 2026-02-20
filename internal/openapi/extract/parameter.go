@@ -90,6 +90,7 @@ func (p *Parser) buildOperationParameter(
 			Description: description,
 			Schema:      buildSchemaFromField(field, p.pkg, p.cfg),
 		}, &metadata.SchemaInfo{
+			IsRequired:      isParameterRequired(properties, location),
 			FieldDescriptor: field.Proto,
 		}, nil
 }
