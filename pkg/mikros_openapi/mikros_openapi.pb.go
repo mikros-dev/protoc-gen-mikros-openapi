@@ -71,7 +71,7 @@ func (x OpenapiSecurityType) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Do not use.
+// Deprecated: Parse not use.
 func (x *OpenapiSecurityType) UnmarshalJSON(b []byte) error {
 	num, err := protoimpl.X.UnmarshalJSONEnum(x.Descriptor(), b)
 	if err != nil {
@@ -133,7 +133,7 @@ func (x OpenapiSecurityApiKeyLocation) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Do not use.
+// Deprecated: Parse not use.
 func (x *OpenapiSecurityApiKeyLocation) UnmarshalJSON(b []byte) error {
 	num, err := protoimpl.X.UnmarshalJSONEnum(x.Descriptor(), b)
 	if err != nil {
@@ -198,7 +198,7 @@ func (x OpenapiSecurityScheme) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Do not use.
+// Deprecated: Parse not use.
 func (x *OpenapiSecurityScheme) UnmarshalJSON(b []byte) error {
 	num, err := protoimpl.X.UnmarshalJSONEnum(x.Descriptor(), b)
 	if err != nil {
@@ -438,7 +438,7 @@ func (x ResponseCode) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Do not use.
+// Deprecated: Parse not use.
 func (x *ResponseCode) UnmarshalJSON(b []byte) error {
 	num, err := protoimpl.X.UnmarshalJSONEnum(x.Descriptor(), b)
 	if err != nil {
@@ -497,7 +497,7 @@ func (x RequestBodyType) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Do not use.
+// Deprecated: Parse not use.
 func (x *RequestBodyType) UnmarshalJSON(b []byte) error {
 	num, err := protoimpl.X.UnmarshalJSONEnum(x.Descriptor(), b)
 	if err != nil {
@@ -581,7 +581,7 @@ func (x PropertyFormat) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Do not use.
+// Deprecated: Parse not use.
 func (x *PropertyFormat) UnmarshalJSON(b []byte) error {
 	num, err := protoimpl.X.UnmarshalJSONEnum(x.Descriptor(), b)
 	if err != nil {
@@ -646,7 +646,7 @@ func (x PropertyLocation) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Do not use.
+// Deprecated: Parse not use.
 func (x *PropertyLocation) UnmarshalJSON(b []byte) error {
 	num, err := protoimpl.X.UnmarshalJSONEnum(x.Descriptor(), b)
 	if err != nil {
@@ -1085,8 +1085,8 @@ type OpenapiMethod struct {
 	unknownFields   protoimpl.UnknownFields
 	extensionFields protoimpl.ExtensionFields
 
-	Summary                  *string     `protobuf:"bytes,1,req,name=summary" json:"summary,omitempty"`
-	Description              *string     `protobuf:"bytes,2,req,name=description" json:"description,omitempty"`
+	Summary                  *string     `protobuf:"bytes,1,opt,name=summary" json:"summary,omitempty"`
+	Description              *string     `protobuf:"bytes,2,opt,name=description" json:"description,omitempty"`
 	Tags                     []string    `protobuf:"bytes,3,rep,name=tags" json:"tags,omitempty"`
 	Response                 []*Response `protobuf:"bytes,4,rep,name=response" json:"response,omitempty"`
 	DisableInboundProcessing *bool       `protobuf:"varint,5,opt,name=disable_inbound_processing,json=disableInboundProcessing" json:"disable_inbound_processing,omitempty"`
@@ -1619,9 +1619,9 @@ var file_proto_mikros_openapi_proto_rawDesc = []byte{
 	0x61, 0x6c, 0x75, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75,
 	0x65, 0x3a, 0x02, 0x38, 0x01, 0x22, 0xd4, 0x01, 0x0a, 0x0d, 0x4f, 0x70, 0x65, 0x6e, 0x61, 0x70,
 	0x69, 0x4d, 0x65, 0x74, 0x68, 0x6f, 0x64, 0x12, 0x18, 0x0a, 0x07, 0x73, 0x75, 0x6d, 0x6d, 0x61,
-	0x72, 0x79, 0x18, 0x01, 0x20, 0x02, 0x28, 0x09, 0x52, 0x07, 0x73, 0x75, 0x6d, 0x6d, 0x61, 0x72,
+	0x72, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x73, 0x75, 0x6d, 0x6d, 0x61, 0x72,
 	0x79, 0x12, 0x20, 0x0a, 0x0b, 0x64, 0x65, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e,
-	0x18, 0x02, 0x20, 0x02, 0x28, 0x09, 0x52, 0x0b, 0x64, 0x65, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74,
+	0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x64, 0x65, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74,
 	0x69, 0x6f, 0x6e, 0x12, 0x12, 0x0a, 0x04, 0x74, 0x61, 0x67, 0x73, 0x18, 0x03, 0x20, 0x03, 0x28,
 	0x09, 0x52, 0x04, 0x74, 0x61, 0x67, 0x73, 0x12, 0x2d, 0x0a, 0x08, 0x72, 0x65, 0x73, 0x70, 0x6f,
 	0x6e, 0x73, 0x65, 0x18, 0x04, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x11, 0x2e, 0x6f, 0x70, 0x65, 0x6e,

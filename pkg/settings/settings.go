@@ -13,12 +13,13 @@ import (
 // Settings contains all settings for the plugin read from the plugin TOML
 // file.
 type Settings struct {
-	Debug                     bool    `toml:"debug" default:"false"`
-	AddServiceNameInEndpoints bool    `toml:"add_service_name_in_endpoints" default:"false"`
-	Enum                      *Enum   `toml:"enum" default:"{}"`
-	Mikros                    *Mikros `toml:"mikros" default:"{}"`
-	Output                    *Output `toml:"output" default:"{}"`
-	Error                     *Error  `toml:"error" default:"{}"`
+	Debug                     bool       `toml:"debug" default:"false"`
+	AddServiceNameInEndpoints bool       `toml:"add_service_name_in_endpoints" default:"false"`
+	Enum                      *Enum      `toml:"enum" default:"{}"`
+	Mikros                    *Mikros    `toml:"mikros" default:"{}"`
+	Output                    *Output    `toml:"output" default:"{}"`
+	Error                     *Error     `toml:"error" default:"{}"`
+	Operation                 *Operation `toml:"operation" default:"{}"`
 
 	MikrosSettings *msettings.Settings
 }
@@ -48,8 +49,10 @@ type Output struct {
 
 // Error contains settings for customizing the default error response.
 type Error struct {
-	DefaultName string                `toml:"default_name" default:"DefaultError"`
-	Fields      map[string]ErrorField `toml:"fields"`
+	DefaultName        string                `toml:"default_name" default:"DefaultError"`
+	DefaultDescription string                `toml:"default_description" default:"The default error response."`
+	Fields             map[string]ErrorField `toml:"fields"`
+	Responses          []ErrorResponse       `toml:"responses"`
 }
 
 // ErrorField defines the basic schema for an error property.
@@ -59,6 +62,20 @@ type ErrorField struct {
 	Items                *ErrorField           `toml:"items"`
 	Fields               map[string]ErrorField `toml:"fields"`
 	AdditionalProperties *ErrorField           `toml:"additional_properties"`
+}
+
+// ErrorResponse defines a default error response code that all endpoints
+// will have.
+type ErrorResponse struct {
+	Code        int    `toml:"code"`
+	Description string `toml:"description"`
+}
+
+// Operation contains settings for customizing behavior of all generated
+// endpoints.
+type Operation struct {
+	DefaultSuccessCode        int    `toml:"default_success_code" default:"200"`
+	DefaultSuccessDescription string `toml:"default_success_description" default:"OK"`
 }
 
 // LoadSettings loads the settings from the given TOML file.
@@ -90,7 +107,7 @@ func LoadSettings(filename string) (*Settings, error) {
 		return nil, fmt.Errorf("could not load mikros plugin settings file: %w", err)
 	}
 	if err := cfg.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid Settings: %w", err)
+		return nil, fmt.Errorf("invalid cfg: %w", err)
 	}
 	settings.MikrosSettings = cfg
 
@@ -116,6 +133,14 @@ func (s *Settings) adjustValues() {
 			"message":      {Type: "string"},
 			"destination":  {Type: "string"},
 			"kind":         {Type: "string"},
+		}
+	}
+
+	// Default error codes for all endpoints.
+	if len(s.Error.Responses) == 0 {
+		s.Error.Responses = []ErrorResponse{
+			{Code: 500, Description: "Internal Server Error"},
+			{Code: 400, Description: "Bad Request"},
 		}
 	}
 }

@@ -7,20 +7,23 @@ import (
 	"google.golang.org/protobuf/compiler/protogen"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/metadata"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/settings"
 )
 
 // Context holds the context for the OpenAPI generation. This structure is
 // available inside template files.
 type Context struct {
-	Openapi  *openapi.Openapi
+	Openapi  *spec.Openapi
 	Settings *settings.Settings
+	Metadata metadata.Metadata
 }
 
 // BuildContext builds the main context for the OpenAPI generation.
 func BuildContext(ctx context.Context, plugin *protogen.Plugin, cfg *settings.Settings) (*Context, error) {
 	// Build the api-specific context
-	api, err := openapi.FromProto(ctx, plugin, cfg)
+	api, meta, err := openapi.FromProto(ctx, plugin, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -32,6 +35,7 @@ func BuildContext(ctx context.Context, plugin *protogen.Plugin, cfg *settings.Se
 	return &Context{
 		Settings: cfg,
 		Openapi:  api,
+		Metadata: meta,
 	}, nil
 }
 

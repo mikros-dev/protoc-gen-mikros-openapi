@@ -84,8 +84,8 @@ extend google.protobuf.MethodOptions {
 }
 
 message OpenapiMethod {
-  required string summary = 1;
-  required string description = 2;
+  optional string summary = 1;
+  optional string description = 2;
   repeated string tags = 3;
   repeated Response response = 4;
   optional bool disable_inbound_processing = 5;

@@ -80,11 +80,11 @@ func handleProtogenPlugin(
 		return "", "", nil
 	}
 
-	logger.Println("processing module:", tplContext.Openapi.ModuleName())
+	logger.Println("processing module:", tplContext.Metadata.ModuleName())
 	content, err := tplContext.OutputOpenapi()
 
 	// Defines the destination directory for the generated file
-	outputDir := filepath.Join(tplContext.Settings.Output.Path, tplContext.Openapi.ModuleName())
+	outputDir := filepath.Join(tplContext.Settings.Output.Path, tplContext.Metadata.ModuleName())
 	if cfg.Output.UseDefaultOut {
 		outputDir = ""
 	}

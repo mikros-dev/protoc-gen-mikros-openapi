@@ -1,20 +1,15 @@
-package openapi
+package extract
 
 import (
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/openapi/lookup"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
+	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
 )
 
-// Security describes security schemes supported by the API.
-type Security struct {
-	Type         string `yaml:"type"`
-	Scheme       string `yaml:"scheme"`
-	BearerFormat string `yaml:"bearerFormat,omitempty"`
-}
-
-func parseOperationSecurity(pkg *protobuf.Protobuf) []map[string][]string {
-	if extensions := mikros_openapi.LoadServiceExtensions(pkg.Service.Proto); extensions != nil {
+func buildOperationSecurity(pkg *protobuf.Protobuf) []map[string][]string {
+	if extensions := lookup.LoadServiceSecurityExtensions(pkg); extensions != nil {
 		security := make([]map[string][]string, len(extensions))
 		for i, extension := range extensions {
 			security[i] = map[string][]string{
@@ -28,11 +23,11 @@ func parseOperationSecurity(pkg *protobuf.Protobuf) []map[string][]string {
 	return nil
 }
 
-func parseComponentsSecurity(pkg *protobuf.Protobuf) map[string]*Security {
-	if extensions := mikros_openapi.LoadServiceExtensions(pkg.Service.Proto); extensions != nil {
-		security := make(map[string]*Security)
+func buildComponentsSecurity(pkg *protobuf.Protobuf) map[string]*spec.Security {
+	if extensions := lookup.LoadServiceSecurityExtensions(pkg); extensions != nil {
+		security := make(map[string]*spec.Security)
 		for _, extension := range extensions {
-			security[extension.GetName()] = &Security{
+			security[extension.GetName()] = &spec.Security{
 				Type:         securityTypeToString(extension.GetType()),
 				Scheme:       securitySchemeToString(extension.GetScheme()),
 				BearerFormat: extension.GetBearerFormat(),
