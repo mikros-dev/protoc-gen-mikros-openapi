@@ -6,7 +6,13 @@ import (
 
 // transformRules defines schema transformation callbacks.
 type transformRules struct {
-	TransformRef          func(string) string
+	// TransformRef is a function called for every schema node that has a
+	// non-empty Ref field. It should return the transformed reference.
+	TransformRef func(string) string
+
+	// TransformPropertyName is a function called for every property in a schema
+	// when the parent is an object schema. It should return the transformed property
+	// name.
 	TransformPropertyName func(parent *spec.Schema, name string, property *spec.Schema) (string, error)
 }
 
@@ -77,7 +83,11 @@ func transformProperties(schema *spec.Schema, rules transformRules) error {
 	}
 
 	// The renaming path. Rebuild the map.
-	properties := make(map[string]*spec.Schema, len(schema.Properties))
+	var (
+		properties = make(map[string]*spec.Schema, len(schema.Properties))
+		renamed    = make(map[string]string, len(schema.Properties))
+	)
+
 	for name, property := range schema.Properties {
 		if err := transformSchema(property, rules); err != nil {
 			return err
@@ -88,9 +98,30 @@ func transformProperties(schema *spec.Schema, rules transformRules) error {
 			return err
 		}
 
+		renamed[name] = transformedName
 		properties[transformedName] = property
 	}
 
 	schema.Properties = properties
+	schema.RequiredProperties = transformRequiredProperties(schema.RequiredProperties, renamed)
+
 	return nil
+}
+
+func transformRequiredProperties(required []string, renamed map[string]string) []string {
+	if len(required) == 0 {
+		return required
+	}
+
+	out := make([]string, len(required))
+	for i, name := range required {
+		if n, ok := renamed[name]; ok {
+			out[i] = n
+			continue
+		}
+
+		out[i] = name
+	}
+
+	return out
 }
