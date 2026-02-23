@@ -77,6 +77,8 @@ func (p *Parser) collectMethodComponentsSchemas() (map[string]*spec.Schema, erro
 		}
 	}
 
+	p.mergeTrackedSchemas(parser)
+
 	return schemas, nil
 }
 
