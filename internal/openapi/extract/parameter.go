@@ -27,6 +27,15 @@ func (p *Parser) collectOperationParameters(methodCtx *methodContext) ([]*spec.P
 			return nil, err
 		}
 
+		if parameter.Schema != nil {
+			// Track parameter schemas for later reference, including fields
+			// resolved to request body.
+			p.schemas[parameter.Schema] = &schemaInfo{
+				Info:       info,
+				ProtoField: field,
+			}
+		}
+
 		if parameter.Location == "body" {
 			// Body parameters should go with their schema, at the components
 			// section.
@@ -34,14 +43,6 @@ func (p *Parser) collectOperationParameters(methodCtx *methodContext) ([]*spec.P
 		}
 
 		params = append(params, parameter)
-
-		if parameter.Schema != nil {
-			// Track parameter schemas for later reference
-			p.schemas[parameter.Schema] = &schemaInfo{
-				Info:       info,
-				ProtoField: field,
-			}
-		}
 	}
 
 	return params, nil

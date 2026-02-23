@@ -229,3 +229,27 @@ func (p *Parser) getMetaSchemaInfo() map[*spec.Schema]*metadata.SchemaInfo {
 
 	return meta
 }
+
+func (p *Parser) mergeTrackedSchemas(parser *messageParser) {
+	if parser == nil {
+		return
+	}
+
+	for schema, field := range parser.fields {
+		if schema == nil || field == nil {
+			continue
+		}
+
+		if _, ok := p.schemas[schema]; ok {
+			continue
+		}
+
+		p.schemas[schema] = &schemaInfo{
+			Info: &metadata.SchemaInfo{
+				IsRequired:      isFieldRequired(field),
+				FieldDescriptor: field.Proto,
+			},
+			ProtoField: field,
+		}
+	}
+}
