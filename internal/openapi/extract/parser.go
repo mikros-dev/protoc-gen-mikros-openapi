@@ -212,6 +212,8 @@ func (p *Parser) buildOperation(
 		}, &metadata.OperationInfo{
 			Method:     methodCtx.httpMethod,
 			Endpoint:   methodCtx.endpoint,
+			InputName:  metadata_builder.NewProtoName(methodCtx.method.Proto.GetInputType()),
+			OutputName: metadata_builder.NewProtoName(methodCtx.method.Proto.GetOutputType()),
 			Descriptor: methodCtx.method.Proto,
 		}, nil
 }
