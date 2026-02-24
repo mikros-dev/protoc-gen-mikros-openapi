@@ -1,6 +1,8 @@
 package metadata
 
 import (
+	"strings"
+
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/metadata"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/openapi/spec"
 )
@@ -43,4 +45,26 @@ func (m *Metadata) OperationInfo(operationID string) (*metadata.OperationInfo, b
 func (m *Metadata) SchemaInfo(schema *spec.Schema) (*metadata.SchemaInfo, bool) {
 	info, ok := m.schemaInfo[schema]
 	return info, ok
+}
+
+// NewProtoName creates a metadata.ProtoName based on the type name passed.
+func NewProtoName(typeName string) *metadata.ProtoName {
+	var (
+		raw = typeName
+		fq = strings.TrimPrefix(typeName, ".")
+		pkg = ""
+		msg = fq
+	)
+
+	if i := strings.LastIndexByte(fq, '.'); i >= 0 {
+		pkg = fq[:i]
+		msg = fq[i+1:]
+	}
+
+	return &metadata.ProtoName{
+		Raw:            raw,
+		FullyQualified: fq,
+		Package:        pkg,
+		Message:        msg,
+	}
 }

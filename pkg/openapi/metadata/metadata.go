@@ -26,7 +26,24 @@ type Metadata interface {
 type OperationInfo struct {
 	Method     string
 	Endpoint   string
+	InputName  *ProtoName
+	OutputName *ProtoName
 	Descriptor *descriptorpb.MethodDescriptorProto
+}
+
+// ProtoName contains the protobuf type name components.
+type ProtoName struct {
+	// Raw is the exact protobuf descriptor type name.
+	Raw string
+
+	// FullyQualified is Raw without the leading dot.
+	FullyQualified string
+
+	// Package is the protobuf package portion.
+	Package string
+
+	// Message is the message name without Package.
+	Message string
 }
 
 // SchemaInfo contains information about a given schema.
