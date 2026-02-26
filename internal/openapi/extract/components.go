@@ -96,7 +96,10 @@ func (p *Parser) collectRequestSchemas(
 	methodCtx *methodContext,
 	acc map[string]*spec.Schema,
 ) error {
-	reqSchemas, err := parser.CollectMessageSchemas(methodCtx.requestMessage, methodCtx)
+	reqCtx := *methodCtx
+	reqCtx.schemaScope = schemaScopeRequest
+
+	reqSchemas, err := parser.CollectMessageSchemas(methodCtx.requestMessage, &reqCtx)
 	if err != nil {
 		return err
 	}
@@ -171,7 +174,10 @@ func (p *Parser) collectResponseSchemas(
 	methodCtx *methodContext,
 	acc map[string]*spec.Schema,
 ) error {
-	respSchemas, err := parser.CollectMessageSchemas(methodCtx.responseMessage, methodCtx)
+	reqCtx := *methodCtx
+	reqCtx.schemaScope = schemaScopeResponse
+
+	respSchemas, err := parser.CollectMessageSchemas(methodCtx.responseMessage, &reqCtx)
 	if err != nil {
 		return err
 	}
