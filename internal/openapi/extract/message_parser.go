@@ -223,6 +223,10 @@ func (m *messageParser) shouldSkipNonBodyField(
 	methodCtx *methodContext,
 	fieldName, messageModule string,
 ) bool {
+	if methodCtx == nil || methodCtx.schemaScope != schemaScopeRequest {
+		return false
+	}
+
 	loc := lookup.FieldLocation(
 		ext,
 		methodCtx.httpRule,

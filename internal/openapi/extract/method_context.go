@@ -12,6 +12,13 @@ import (
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
 )
 
+type schemaScope string
+
+const (
+	schemaScopeRequest  schemaScope = "request"
+	schemaScopeResponse schemaScope = "response"
+)
+
 // methodContext is a helper structure to hold method-specific context.
 type methodContext struct {
 	method           *protobuf.Method
@@ -24,6 +31,7 @@ type methodContext struct {
 	extensions       *mikros_openapi.OpenapiMethod
 	requestMessage   *protobuf.Message
 	responseMessage  *protobuf.Message
+	schemaScope      schemaScope
 }
 
 // buildMethodContext centralizes extraction of annotations and path params for

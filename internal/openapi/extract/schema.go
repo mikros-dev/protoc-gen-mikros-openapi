@@ -6,6 +6,7 @@ import (
 
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
 	"google.golang.org/protobuf/reflect/protoreflect"
+	descriptor "google.golang.org/protobuf/types/descriptorpb"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/openapi/lookup"
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/pkg/mikros_openapi"
@@ -70,6 +71,15 @@ func applyProtobufSpecialCases(
 	if field.IsTimestamp() {
 		// Timestamps are always formatted as date-time.
 		schema.Format = "date-time"
+	}
+
+	switch field.Type {
+	case descriptor.FieldDescriptorProto_TYPE_UINT32,
+		descriptor.FieldDescriptorProto_TYPE_FIXED32:
+		schema.Format = "uint32"
+	case descriptor.FieldDescriptorProto_TYPE_UINT64,
+		descriptor.FieldDescriptorProto_TYPE_FIXED64:
+		schema.Format = "uint64"
 	}
 
 	if field.IsEnum() {
