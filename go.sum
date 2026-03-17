@@ -31,8 +31,8 @@ github.com/iancoleman/strcase v0.3.0 h1:nTXanmYxhfFAMjZL34Ov6gkzEsSJZ5DbhxWjvSAS
 github.com/iancoleman/strcase v0.3.0/go.mod h1:iwCmte+B7n89clKwxIoIXy/HfoL7AsD47ZCWhYzw7ho=
 github.com/leodido/go-urn v1.4.0 h1:WT9HwE9SGECu3lg4d/dIA+jxlljEa1/ffXKmRjqdmIQ=
 github.com/leodido/go-urn v1.4.0/go.mod h1:bvxc+MVxLKB4z00jd1z+Dvzr47oO32F/QSNjSBOlFxI=
-github.com/mikros-dev/protoc-gen-mikros-extensions v0.21.0 h1:VAIFHhr0NE0gWCVMhQ32cimyMwvBemvkowZVdYU1jAs=
-github.com/mikros-dev/protoc-gen-mikros-extensions v0.21.0/go.mod h1:UqjlSuoPOFwMhDRYJyvYq0MfUj8m/U7Btci8IXYD3QE=
+github.com/mikros-dev/protoc-gen-mikros-extensions v0.22.0 h1:kmvTBqJH3Uq83iB2TxBsjYp4OVFsmWggdwuGTdskzOI=
+github.com/mikros-dev/protoc-gen-mikros-extensions v0.22.0/go.mod h1:UqjlSuoPOFwMhDRYJyvYq0MfUj8m/U7Btci8IXYD3QE=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stoewer/go-strcase v1.3.1 h1:iS0MdW+kVTxgMoE1LAZyMiYJFKlOzLooE4MxjirtkAs=

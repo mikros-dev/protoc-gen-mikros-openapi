@@ -29,6 +29,7 @@ type OperationInfo struct {
 	InputName  *ProtoName
 	OutputName *ProtoName
 	Descriptor *descriptorpb.MethodDescriptorProto
+	Comment    Comment
 }
 
 // ProtoName contains the protobuf type name components.
@@ -46,8 +47,16 @@ type ProtoName struct {
 	Message string
 }
 
+// Comment contains the leading and trailing comments for a given protobuf
+// method.
+type Comment struct {
+	Leading  string
+	Trailing string
+	LeadingDetached []string
+}
+
 // SchemaInfo contains information about a given schema.
 type SchemaInfo struct {
-	IsRequired        bool
-	FieldDescriptor   *descriptorpb.FieldDescriptorProto
+	IsRequired      bool
+	FieldDescriptor *descriptorpb.FieldDescriptorProto
 }
