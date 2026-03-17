@@ -215,6 +215,11 @@ func (p *Parser) buildOperation(
 			InputName:  metadata_builder.NewProtoName(methodCtx.method.Proto.GetInputType()),
 			OutputName: metadata_builder.NewProtoName(methodCtx.method.Proto.GetOutputType()),
 			Descriptor: methodCtx.method.Proto,
+			Comment: metadata.Comment{
+				Leading:         methodCtx.method.Comment.Leading,
+				Trailing:        methodCtx.method.Comment.Trailing,
+				LeadingDetached: methodCtx.method.Comment.LeadingDetached,
+			},
 		}, nil
 }
 
