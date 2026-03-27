@@ -16,13 +16,13 @@ message OpenapiMetadata {
 }
 
 message OpenapiInfo {
-  required string title = 1;
+  optional string title = 1;
   optional string description = 2;
-  required string version = 3;
+  optional string version = 3;
 }
 
 message OpenapiServer {
-  required string url = 1;
+  optional string url = 1;
   optional string description = 2;
 }
 

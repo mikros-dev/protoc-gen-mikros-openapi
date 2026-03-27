@@ -16,6 +16,7 @@ type Settings struct {
 	Debug                     bool       `toml:"debug" default:"false"`
 	AddServiceNameInEndpoints bool       `toml:"add_service_name_in_endpoints" default:"false"`
 	Enum                      *Enum      `toml:"enum" default:"{}"`
+	Metadata                  *Metadata  `toml:"metadata" default:"{}"`
 	Mikros                    *Mikros    `toml:"mikros" default:"{}"`
 	Output                    *Output    `toml:"output" default:"{}"`
 	Error                     *Error     `toml:"error" default:"{}"`
@@ -37,6 +38,27 @@ type Mikros struct {
 type Enum struct {
 	RemovePrefix           bool `toml:"remove_prefix" default:"false"`
 	RemoveUnspecifiedEntry bool `toml:"remove_unspecified_entry" default:"false"`
+}
+
+// Metadata contains settings related to OpenAPI top-level metadata. These
+// values are used when the protobuf file does not define openapi.metadata.
+type Metadata struct {
+	Info    *MetadataInfo    `toml:"info" default:"{}"`
+	Servers []MetadataServer `toml:"servers"`
+	Server  []MetadataServer `toml:"server"`
+}
+
+// MetadataInfo defines the OpenAPI info object values.
+type MetadataInfo struct {
+	Title       string `toml:"title"`
+	Description string `toml:"description"`
+	Version     string `toml:"version"`
+}
+
+// MetadataServer defines an OpenAPI server entry.
+type MetadataServer struct {
+	URL         string `toml:"url"`
+	Description string `toml:"description"`
 }
 
 // Output contains all settings related to the output directory of generated
@@ -125,6 +147,10 @@ func loadDefaultSettings() (*Settings, error) {
 }
 
 func (s *Settings) adjustValues() {
+	if len(s.Metadata.Servers) == 0 && len(s.Metadata.Server) > 0 {
+		s.Metadata.Servers = append([]MetadataServer(nil), s.Metadata.Server...)
+	}
+
 	// Set mikros defaults if no fields are provided
 	if len(s.Error.Fields) == 0 {
 		s.Error.Fields = map[string]ErrorField{

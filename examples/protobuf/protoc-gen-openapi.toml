@@ -5,6 +5,17 @@ debug = true
 remove_prefix = true
 remove_unspecified_entry = true
 
+[metadata.info]
+description = "Just an API example"
+
+[[metadata.servers]]
+url = "http://dev.api.example.com"
+description = "The development version of the API"
+
+[[metadata.servers]]
+url = "https://prod.api.example.com"
+description = "The production version of the API"
+
 [output]
 path = "openapi"
 

@@ -5,6 +5,7 @@ import (
 
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/mapping"
 	"github.com/mikros-dev/protoc-gen-mikros-extensions/pkg/protobuf"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/mikros-dev/protoc-gen-mikros-openapi/internal/openapi/lookup"
 	metadata_builder "github.com/mikros-dev/protoc-gen-mikros-openapi/internal/openapi/metadata"
@@ -90,11 +91,14 @@ func (p *Parser) buildInfo() (*spec.Info, error) {
 		description string
 	)
 
-	meta := mikros_openapi.LoadMetadata(f.Proto)
-	if meta != nil && meta.GetInfo() != nil {
-		title = meta.GetInfo().GetTitle()
-		description = meta.GetInfo().GetDescription()
-		version = meta.GetInfo().GetVersion()
+	// Try metadata settings first
+	if meta := p.settingsMetadata(); meta != nil {
+		title, description, version = mergeInfo(title, description, version, meta.GetInfo())
+	}
+
+	// Then the protobuf ones
+	if meta := mikros_openapi.LoadMetadata(f.Proto); meta != nil {
+		title, description, version = mergeInfo(title, description, version, meta.GetInfo())
 	}
 
 	return &spec.Info{
@@ -102,6 +106,24 @@ func (p *Parser) buildInfo() (*spec.Info, error) {
 		Version:     version,
 		Description: description,
 	}, nil
+}
+
+func mergeInfo(dstTitle, dstDescription, dstVersion string, src *mikros_openapi.OpenapiInfo) (string, string, string) {
+	if src == nil {
+		return dstTitle, dstDescription, dstVersion
+	}
+
+	if v := src.GetTitle(); v != "" {
+		dstTitle = v
+	}
+	if v := src.GetDescription(); v != "" {
+		dstDescription = v
+	}
+	if v := src.GetVersion(); v != "" {
+		dstVersion = v
+	}
+
+	return dstTitle, dstDescription, dstVersion
 }
 
 func (p *Parser) buildServers() ([]*spec.Server, error) {
@@ -115,6 +137,10 @@ func (p *Parser) buildServers() ([]*spec.Server, error) {
 		servers []*spec.Server
 	)
 
+	if meta == nil {
+		meta = p.settingsMetadata()
+	}
+
 	if meta != nil {
 		for _, server := range meta.GetServer() {
 			servers = append(servers, &spec.Server{
@@ -125,6 +151,36 @@ func (p *Parser) buildServers() ([]*spec.Server, error) {
 	}
 
 	return servers, nil
+}
+
+func (p *Parser) settingsMetadata() *mikros_openapi.OpenapiMetadata {
+	if p.cfg == nil || p.cfg.Metadata == nil {
+		return nil
+	}
+
+	var meta mikros_openapi.OpenapiMetadata
+	if info := p.cfg.Metadata.Info; info != nil {
+		if info.Title != "" || info.Description != "" || info.Version != "" {
+			meta.Info = &mikros_openapi.OpenapiInfo{
+				Title:       proto.String(info.Title),
+				Description: proto.String(info.Description),
+				Version:     proto.String(info.Version),
+			}
+		}
+	}
+
+	for _, server := range p.cfg.Metadata.Servers {
+		meta.Server = append(meta.Server, &mikros_openapi.OpenapiServer{
+			Url:         proto.String(server.URL),
+			Description: proto.String(server.Description),
+		})
+	}
+
+	if meta.Info == nil && len(meta.Server) == 0 {
+		return nil
+	}
+
+	return &meta
 }
 
 func (p *Parser) collectPathItems() (map[string]map[string]*spec.Operation, map[string]*metadata.OperationInfo, error) {

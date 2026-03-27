@@ -6,6 +6,15 @@ add_service_name_in_endpoints = true
 remove_prefix = true
 remove_unspecified_entry = true
 
+[metadata.info]
+title = "my-service"
+version = "v0.1.0"
+description = "OpenAPI metadata can also be configured here instead of in the protobuf file."
+
+[[metadata.servers]]
+url = "http://dev.api.example.com"
+description = "Development"
+
 [output]
 path = "openapi"
 
