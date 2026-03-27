@@ -13,17 +13,7 @@ import "services/misc/misc.proto";
 
 option (openapi.metadata) = {
   info: {
-    title: "user-bff"
     version: "v0.1.0"
-    description: "Just an API example"
-  }
-  server: {
-    url: "http://dev.api.example.com"
-    description: "The development version of the API"
-  }
-  server: {
-    url: "https://prod.api.example.com"
-    description: "The production version of the API"
   }
 };
 

@@ -7,7 +7,7 @@ YAML files from protobuf HTTP API declarations.
 
 This plugin provides an easy way of generating OpeAPI specification of an HTTP
 service API directly from its protobuf file. It uses protobuf annotation options
-to allow the user define details about the service and its endpoints.
+to allow the user to define details about the service and its endpoints.
 
 It can be used alone or together with the [protoc-gen-mikros-extensions](https://github.com/mikros-dev/protoc-gen-mikros-extension)
 plugin for messages and field names.
@@ -48,7 +48,7 @@ buf dep update
 
 ## Building and installing locally
 
-In order to compile and install the plugin locally you'll need to follow the steps:
+In order to compile and install the plugin locally, you'll need to follow the steps:
 
 * Install the go compiler;
 * Execute the commands:
