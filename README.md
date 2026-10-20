@@ -1,6 +1,6 @@
 # protoc-gen-openapi
 
-A protoc/buf plugin to generate compatible [OpenAPI version 3.0.0](https://swagger.io/specification/v3/)
+A protoc/buf plugin to generate compatible [OpenAPI version 3.1.0](https://spec.openapis.org/oas/v3.1)
 YAML files from protobuf HTTP API declarations.
 
 ## Features

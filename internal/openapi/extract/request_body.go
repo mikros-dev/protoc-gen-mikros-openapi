@@ -10,7 +10,7 @@ import (
 
 func (p *Parser) buildRequestBody(methodCtx *methodContext) *spec.RequestBody {
 	httpMethod := methodCtx.httpMethod
-	if httpMethod != http.MethodPost && httpMethod != http.MethodPut && httpMethod != http.MethodPatch {
+	if httpMethod != http.MethodPost && httpMethod != http.MethodPut && httpMethod != http.MethodPatch && httpMethod != http.MethodDelete {
 		return nil
 	}
 

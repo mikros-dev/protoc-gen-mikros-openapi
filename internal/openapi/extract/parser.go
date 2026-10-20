@@ -67,7 +67,7 @@ func (p *Parser) Parse() (*spec.Openapi, metadata.Metadata, error) {
 	}
 
 	return &spec.Openapi{
-			Version:    "3.0.0",
+			Version:    "3.1.0",
 			Info:       info,
 			Servers:    servers,
 			PathItems:  pathItems,
